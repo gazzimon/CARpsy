@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-05_evaluate_adapter.py — Structural evaluation of the fine-tuned LoRA adapter.
+05_evaluate_adapter.py  Structural evaluation of the fine-tuned LoRA adapter.
 
 Analyzes the test split to assess:
   - DTC code identification accuracy
@@ -64,7 +64,7 @@ def extract_code_from_assistant(assistant_msg: str) -> Optional[str]:
 
 def contains_critical_indicator(text: str) -> bool:
     """Check whether the response flags a critical issue."""
-    indicators = ["critical", "immediate", "not safe", "serious", "urgent", "⚠️"]
+    indicators = ["critical", "immediate", "not safe", "serious", "urgent", "[WARN]"]
     return any(ind in text.lower() for ind in indicators)
 
 
@@ -104,15 +104,15 @@ def generate_report(results: list[dict], total: int) -> dict:
 
 def print_report(report: dict) -> None:
     print("\n" + "=" * 60)
-    print("📊 EVALUATION REPORT")
+    print("[stats] EVALUATION REPORT")
     print("=" * 60)
     print(f"  Total samples evaluated: {report['total_evaluated']}")
-    print(f"\n  📈 Metrics:")
+    print(f"\n  [chart] Metrics:")
     print(f"     Code identification rate:  {report['code_identification_rate']:.1%}")
     print(f"     Critical response rate:    {report['critical_response_rate']:.1%}")
     print(f"     Avg response length:       {report['avg_response_length']:.0f} words")
     print(f"     Structure rate:            {report['structure_rate']:.1%}")
-    print(f"  📝 Coverage:")
+    print(f"  [note] Coverage:")
     print(f"     Samples with code in user:      {report['samples_with_code_in_user']}")
     print(f"     Samples with code in assistant: {report['samples_with_code_in_assistant']}")
     print("=" * 60)
@@ -120,7 +120,7 @@ def print_report(report: dict) -> None:
 
 def show_samples(examples: list[dict], n: int = 3) -> None:
     print("\n" + "=" * 60)
-    print("📝 SAMPLE INSPECTION")
+    print("[note] SAMPLE INSPECTION")
     print("=" * 60)
 
     samples = random.sample(examples, min(n, len(examples)))
@@ -129,14 +129,14 @@ def show_samples(examples: list[dict], n: int = 3) -> None:
         user_msg      = next((m["content"] for m in messages if m["role"] == "user"),      "")
         assistant_msg = next((m["content"] for m in messages if m["role"] == "assistant"), "")
 
-        print(f"\n  ─── Sample #{i} ───")
-        print(f"  👤 USER:      {user_msg}")
-        print(f"  🤖 ASSISTANT: {assistant_msg}")
+        print(f"\n   Sample #{i} ")
+        print(f"   USER:      {user_msg}")
+        print(f"   ASSISTANT: {assistant_msg}")
 
 
 def main():
     print("=" * 60)
-    print("CARpsy — Step 5: Evaluate Dataset Structure")
+    print("CARpsy  Step 5: Evaluate Dataset Structure")
     print("=" * 60)
 
     config = load_config()
@@ -147,7 +147,7 @@ def main():
         print("  [!] Run first: python scripts/03_split_dataset.py")
         return
 
-    print(f"\n📂 Loading test split: {test_path}")
+    print(f"\n[dir] Loading test split: {test_path}")
     test_examples = load_jsonl(test_path)
     print(f"  Total test examples: {len(test_examples)}")
 
@@ -155,7 +155,7 @@ def main():
         print("  [!] No examples to evaluate")
         return
 
-    print("\n🔬 Evaluating examples...")
+    print("\n Evaluating examples...")
     results = [evaluate_example(ex) for ex in test_examples[:1000]]
 
     report = generate_report(results, len(test_examples))
@@ -170,7 +170,7 @@ def main():
     print(f"\n  Report saved to {report_path}")
 
     print("\n" + "=" * 60)
-    print("📋 NOTE ON REAL EVALUATION")
+    print("[list] NOTE ON REAL EVALUATION")
     print("=" * 60)
     print("""
   This is a STRUCTURAL evaluation (response format check).
@@ -188,7 +188,7 @@ def main():
 
   Run: python scripts/06_validate_adapter.py
 """)
-    print("✅ Step 5 complete.")
+    print("[OK] Step 5 complete.")
 
 
 if __name__ == "__main__":

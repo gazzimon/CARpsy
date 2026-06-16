@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-03_split_dataset.py — Split the dataset into train/val/test sets.
+03_split_dataset.py  Split the dataset into train/val/test sets.
 
 Default distribution:
   - Train:      80%
@@ -66,12 +66,12 @@ def save_split(examples: list[dict], split_name: str, output_dir: Path) -> None:
     with open(output_path, "w", encoding="utf-8") as f:
         for example in examples:
             f.write(json.dumps(example, ensure_ascii=False) + "\n")
-    print(f"  [✓] {split_name}: {len(examples)} examples → {output_path}")
+    print(f"  [] {split_name}: {len(examples)} examples  {output_path}")
 
 
 def main():
     print("=" * 60)
-    print("CARpsy — Step 3: Split Dataset")
+    print("CARpsy  Step 3: Split Dataset")
     print("=" * 60)
 
     config = load_config()
@@ -84,24 +84,24 @@ def main():
         return
 
     dataset_path = dataset_files[0]
-    print(f"\n📂 Loading dataset: {dataset_path}")
+    print(f"\n[dir] Loading dataset: {dataset_path}")
     examples = load_dataset(dataset_path)
     print(f"  Total examples: {len(examples)}")
 
     if len(examples) < 100:
-        print("  ⚠️  Small dataset — switching to 70/15/15 split")
+        print("  [WARN]  Small dataset  switching to 70/15/15 split")
         RATIOS["train"] = 0.70
         RATIOS["val"]   = 0.15
         RATIOS["test"]  = 0.15
 
-    print("\n✂️  Splitting dataset...")
+    print("\n[split]  Splitting dataset...")
     splits = split_dataset(examples, RATIOS)
 
-    print("\n💾 Saving splits...")
+    print("\n[save] Saving splits...")
     for name, data in splits.items():
         save_split(data, name, SPLITS_DIR)
 
-    print(f"\n📊 Summary:")
+    print(f"\n[stats] Summary:")
     print(f"  Train: {len(splits['train'])} ({len(splits['train'])/len(examples)*100:.1f}%)")
     print(f"  Val:   {len(splits['val'])} ({len(splits['val'])/len(examples)*100:.1f}%)")
     print(f"  Test:  {len(splits['test'])} ({len(splits['test'])/len(examples)*100:.1f}%)")
@@ -118,7 +118,7 @@ def main():
         json.dump(meta, f, indent=2)
     print(f"\n  Metadata saved to {meta_path}")
 
-    print("\n✅ Step 3 complete. Splits ready for fine-tuning.")
+    print("\n[OK] Step 3 complete. Splits ready for fine-tuning.")
 
 
 if __name__ == "__main__":

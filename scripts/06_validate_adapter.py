@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-06_validate_adapter.py — Valida el adaptador LoRA antes de integrarlo en OBDient.
+06_validate_adapter.py  Valida el adaptador LoRA antes de integrarlo en OBDient.
 
 Ejecuta llama-cli con el modelo base + adaptador fine-tuneado y prueba un
 conjunto de prompts de diagnóstico OBD-II. Verifica que las respuestas:
@@ -176,7 +176,7 @@ def evaluate_response(response: str, case: dict) -> dict:
     keyword_hit_rate = len(keywords_found) / len(case["expected_keywords"])
 
     is_critical_expected = case["expected_severity"] == "critical"
-    critical_indicators = ["critical", "immediate", "not safe", "serious", "urgent", "⚠️", "warning"]
+    critical_indicators = ["critical", "immediate", "not safe", "serious", "urgent", "[WARN]", "warning"]
     severity_ok = any(ind in response_lower for ind in critical_indicators) if is_critical_expected else True
 
     sentences = [s.strip() for s in re.split(r'[.!?]', response) if s.strip()]
@@ -201,13 +201,13 @@ def evaluate_response(response: str, case: dict) -> dict:
 
 def print_case_result(case: dict, result: dict, i: int) -> None:
     status = "PASS" if result["passed"] else "FAIL"
-    print(f"\n  ─── Case #{i}: {status} ───")
+    print(f"\n   Case #{i}: {status} ")
     print(f"  Prompt:   {case['prompt']}")
     print(f"  Response: {result['response_preview']}{'...' if len(result['response_preview']) == 200 else ''}")
-    print(f"  Code found:    {'✓' if result['code_found'] else '✗'} ({case['expected_code']})")
+    print(f"  Code found:    {'' if result['code_found'] else ''} ({case['expected_code']})")
     print(f"  Keywords:      {result['keyword_hit_rate']:.0%} ({', '.join(result['keywords_found'])})")
-    print(f"  Severity OK:   {'✓' if result['severity_ok'] else '✗'}")
-    print(f"  Concise:       {'✓' if result['concise'] else '✗'} ({result['response_length']} words)")
+    print(f"  Severity OK:   {'' if result['severity_ok'] else ''}")
+    print(f"  Concise:       {'' if result['concise'] else ''} ({result['response_length']} words)")
 
 
 def main():
@@ -217,7 +217,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("CARpsy — Step 6: Validate Adapter")
+    print("CARpsy  Step 6: Validate Adapter")
     print("=" * 60)
 
     adapter = Path(args.adapter)
@@ -263,19 +263,19 @@ def main():
     avg_keywords = sum(r["keyword_hit_rate"] for r in all_results) / total
 
     print("\n" + "=" * 60)
-    print("📊 RESUMEN DE VALIDACIÓN")
+    print("[stats] RESUMEN DE VALIDACIÓN")
     print("=" * 60)
     print(f"  Casos pasados:       {passed}/{total} ({passed/total:.0%})")
     print(f"  Keywords promedio:   {avg_keywords:.0%}")
 
     if passed == total:
-        print("\n  ✅ Adaptador validado. Listo para integrar en OBDient.")
+        print("\n  [OK] Adaptador validado. Listo para integrar en OBDient.")
         print(f"\n  En qvac-sdk.datasource.ts:")
         print(f"    adapterSrc: 'file://{adapter.name}'")
     elif passed >= total * 0.8:
-        print("\n  ⚠️  Adaptador aceptable (>80% casos). Revisar casos fallidos antes de producción.")
+        print("\n  [WARN]  Adaptador aceptable (>80% casos). Revisar casos fallidos antes de producción.")
     else:
-        print("\n  ❌ Adaptador NO aceptable. Considera más épocas o ajustar el learning rate.")
+        print("\n  [ERR] Adaptador NO aceptable. Considera más épocas o ajustar el learning rate.")
 
     # Guardar reporte
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -292,7 +292,7 @@ def main():
         json.dump(report, f, indent=2, ensure_ascii=False)
     print(f"\n  Reporte guardado en {REPORT_PATH}")
 
-    print("\n✅ Step 6 complete.")
+    print("\n[OK] Step 6 complete.")
 
 
 if __name__ == "__main__":

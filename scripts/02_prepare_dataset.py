@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-02_prepare_dataset.py — Transform raw DTCs into chat format (system/user/assistant).
+02_prepare_dataset.py  Transform raw DTCs into chat format (system/user/assistant).
 
 Converts raw DTC records into ChatML-style conversations for supervised
 fine-tuning with QVAC Fabric (qvac-fabric-llm.cpp).
 
-Output format: JSONL — one training example per line.
+Output format: JSONL  one training example per line.
   {"messages": [
     {"role": "system",    "content": "..."},
     {"role": "user",      "content": "..."},
@@ -27,7 +27,7 @@ RAW_DIR = REPO_ROOT / "data" / "raw"
 PROCESSED_DIR = REPO_ROOT / "data" / "processed"
 CONFIG_PATH = REPO_ROOT / "configs" / "lora_config.yaml"
 
-# ─── System prompt (matches OBDient's prompt) ────────────────────────────────
+#  System prompt (matches OBDient's prompt) 
 SYSTEM_PROMPT = (
     "You are OBDient, an expert automotive diagnostic assistant. "
     "You receive OBD-II fault codes and vehicle data. "
@@ -37,7 +37,7 @@ SYSTEM_PROMPT = (
     "If something is urgent, indicate it clearly."
 )
 
-# ─── User question templates (for variety) ───────────────────────────────────
+#  User question templates (for variety) 
 USER_TEMPLATES = [
     "I'm getting code {code} on my {make} {model}. What does it mean?",
     "My check engine light is on with code {code}. Should I be worried?",
@@ -50,15 +50,15 @@ USER_TEMPLATES = [
     "Code {code} on {make} {model} {year}. What are the common causes?",
     "I have {code} and {code2}. Are they related?",
     "Reading code {code} on my vehicle. What repairs might be needed?",
-    "Check engine — {code}. How urgent is this?",
+    "Check engine  {code}. How urgent is this?",
     "Fault code {code} detected. Your advice?",
     "What's the meaning of OBD-II code {code}?",
     "Got {code} after engine light came on. Diagnosis?",
 ]
 
-# ─── Assistant response templates by severity ─────────────────────────────────
+#  Assistant response templates by severity 
 CRITICAL_RESPONSE = (
-    "⚠️ **CRITICAL**: {code} — {description}. "
+    "[WARN] **CRITICAL**: {code}  {description}. "
     "This is a serious issue that requires immediate attention. "
     "It is not safe to drive until this is diagnosed and repaired."
 )
@@ -133,6 +133,11 @@ def normalize_record(record: dict) -> Optional[dict]:
             normalized["make"] = str(record[key]).strip()
             break
 
+    # OBDex enriched fields  pass through as-is
+    for key in ("causes", "symptoms", "repair_difficulty", "related_codes", "source"):
+        if key in record:
+            normalized[key] = record[key]
+
     for key in ("model", "Model"):
         if key in record and record[key]:
             normalized["model"] = str(record[key]).strip()
@@ -175,10 +180,34 @@ def determine_severity(code: str) -> str:
     return "warning"
 
 
-def generate_assistant_response(code: str, description: str, severity: str, make: str = "") -> str:
-    """Generate the assistant response for a given DTC."""
+def generate_assistant_response(code: str, description: str, severity: str, make: str = "",
+                                causes: list = None, symptoms: list = None,
+                                repair_difficulty: str = "") -> str:
+    """Generate the assistant response for a given DTC.
+    Uses enriched OBDex fields when available for richer, more useful responses.
+    """
     context = {"code": code, "description": description}
 
+    # Build enriched response when OBDex data is present
+    if causes or symptoms:
+        if severity == "critical":
+            base = f"[WARN] **CRITICAL**: {code}  {description}. Do not drive until diagnosed."
+        elif severity == "warning":
+            base = f"{code}: {description}. Schedule an inspection soon."
+        else:
+            base = f"{code}: {description}. Monitor for related symptoms."
+
+        parts = [base]
+        if causes:
+            top = causes[:2]  # top 2 causes to stay within token limit
+            parts.append(f"Common causes: {'; '.join(top)}.")
+        if symptoms:
+            parts.append(f"Symptoms: {', '.join(symptoms[:2])}.")
+        if repair_difficulty:
+            parts.append(f"Repair difficulty: {repair_difficulty}.")
+        return " ".join(parts)
+
+    # Fallback: template-based response (Wal33D / peyo records)
     if severity == "critical":
         return CRITICAL_RESPONSE.format(**context)
     elif severity == "warning":
@@ -201,15 +230,21 @@ def generate_user_question(code: str, make: str = "Generic", model: str = "Vehic
 
 def create_chat_example(normalized: dict) -> Optional[dict]:
     """Create a chat-format example from a normalized DTC record."""
-    code = normalized["code"]
+    code        = normalized["code"]
     description = normalized["description"]
-    make = normalized.get("make", "Generic")
-    model = normalized.get("model", "Vehicle")
-    year = normalized.get("year", "2020")
-    severity = determine_severity(code)
+    make        = normalized.get("make", "Generic")
+    model       = normalized.get("model", "Vehicle")
+    year        = normalized.get("year", "2020")
+    severity    = determine_severity(code)
 
-    user_msg = generate_user_question(code, make, model, year)
-    assistant_msg = generate_assistant_response(code, description, severity, make)
+    # OBDex enriched fields (absent in Wal33D/peyo records)
+    causes           = normalized.get("causes", [])
+    symptoms         = normalized.get("symptoms", [])
+    repair_difficulty = normalized.get("repair_difficulty", "")
+
+    user_msg      = generate_user_question(code, make, model, year)
+    assistant_msg = generate_assistant_response(code, description, severity, make,
+                                                causes, symptoms, repair_difficulty)
 
     return {
         "messages": [
@@ -235,7 +270,7 @@ def create_multi_code_example(codes: list[dict]) -> Optional[dict]:
     assistant_lines = []
     for c in codes:
         sev = determine_severity(c["code"])
-        prefix = "⚠️ CRITICAL" if sev == "critical" else "•"
+        prefix = "[WARN] CRITICAL" if sev == "critical" else ""
         assistant_lines.append(f"{prefix} {c['code']}: {c['description']}")
     assistant_msg = "\n".join(assistant_lines)
 
@@ -249,7 +284,7 @@ def create_multi_code_example(codes: list[dict]) -> Optional[dict]:
 
 
 def estimate_tokens(text: str) -> int:
-    """Fast token estimate: 1 token ≈ 4 characters."""
+    """Fast token estimate: 1 token  4 characters."""
     return len(text) // 4
 
 
@@ -284,24 +319,24 @@ def save_dataset(examples: list[dict], filename: str) -> None:
     with open(output_path, "w", encoding="utf-8") as f:
         for example in examples:
             f.write(json.dumps(example, ensure_ascii=False) + "\n")
-    print(f"  [✓] Saved {len(examples)} examples to {output_path}")
+    print(f"  [] Saved {len(examples)} examples to {output_path}")
 
 
 def main():
     print("=" * 60)
-    print("CARpsy — Step 2: Prepare Dataset")
+    print("CARpsy  Step 2: Prepare Dataset")
     print("=" * 60)
 
     config = load_config()
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ─── Load raw data ─────────────────────────────────────────────────────
-    print("\n📂 Loading raw data...")
+    #  Load raw data 
+    print("\n[dir] Loading raw data...")
     raw_records = load_raw_data()
     print(f"  Total raw records: {len(raw_records)}")
 
-    # ─── Normalize ──────────────────────────────────────────────────────────
-    print("\n🔄 Normalizing records...")
+    #  Normalize 
+    print("\n[proc] Normalizing records...")
     normalized = []
     skipped = 0
     for record in raw_records:
@@ -313,8 +348,8 @@ def main():
     print(f"  Normalized:  {len(normalized)}")
     print(f"  Skipped (missing code/description): {skipped}")
 
-    # ─── Generate single-code examples ──────────────────────────────────────
-    print("\n💬 Generating single-code chat examples...")
+    #  Generate single-code examples 
+    print("\n Generating single-code chat examples...")
     single_examples = []
     for n in normalized[:config["dataset"]["max_examples"]]:
         example = create_chat_example(n)
@@ -322,8 +357,8 @@ def main():
             single_examples.append(example)
     print(f"  Generated: {len(single_examples)} examples")
 
-    # ─── Generate multi-code examples ───────────────────────────────────────
-    print("\n🔗 Generating multi-code chat examples...")
+    #  Generate multi-code examples 
+    print("\n[link] Generating multi-code chat examples...")
     multi_examples = []
     from collections import defaultdict
     by_make = defaultdict(list)
@@ -346,11 +381,11 @@ def main():
             break
     print(f"  Generated: {len(multi_examples)} multi-code examples")
 
-    # ─── Combine ────────────────────────────────────────────────────────────
+    #  Combine 
     all_examples = single_examples + multi_examples
 
-    # ─── Quality validation ─────────────────────────────────────────────────
-    print("\n🔍 Validating dataset quality...")
+    #  Quality validation 
+    print("\n[find] Validating dataset quality...")
     all_examples, dupes = deduplicate(all_examples)
     print(f"  Duplicates removed: {dupes}")
 
@@ -359,15 +394,15 @@ def main():
 
     random.shuffle(all_examples)
 
-    print(f"\n📊 Total examples: {len(all_examples)}")
+    print(f"\n[stats] Total examples: {len(all_examples)}")
     save_dataset(all_examples, "obdient_chat_dataset.jsonl")
 
-    # ─── Statistics ─────────────────────────────────────────────────────────
+    #  Statistics 
     total_tokens = sum(
         sum(len(m["content"].split()) for m in ex["messages"])
         for ex in all_examples
     )
-    print(f"\n📈 Statistics:")
+    print(f"\n[chart] Statistics:")
     print(f"  Total examples:          {len(all_examples)}")
     print(f"  Estimated total tokens:  {total_tokens}")
     print(f"  Avg tokens per example:  {total_tokens // len(all_examples) if all_examples else 0}")
@@ -387,7 +422,7 @@ def main():
         json.dump(stats, f, indent=2, ensure_ascii=False)
     print(f"  Stats saved to {stats_path}")
 
-    print("\n✅ Step 2 complete. Dataset ready for splitting.")
+    print("\n[OK] Step 2 complete. Dataset ready for splitting.")
 
 
 if __name__ == "__main__":

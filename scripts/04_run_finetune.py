@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-04_run_finetune.py — Run LoRA fine-tuning locally with llama-finetune-lora.
+04_run_finetune.py  Run LoRA fine-tuning locally with llama-finetune-lora.
 
 QVAC Fabric = qvac-fabric-llm.cpp (llama.cpp fork with LoRA training support).
 No cloud API, no data leaves your machine.
 
 Prerequisites:
-  1. Compile qvac-fabric-llm.cpp  →  https://github.com/tetherto/qvac-fabric-llm.cpp
+  1. Compile qvac-fabric-llm.cpp    https://github.com/tetherto/qvac-fabric-llm.cpp
   2. Have the llama-finetune-lora binary available
   3. Download the base GGUF model into models/
 
 Environment variables (set in .env):
-  FABRIC_PATH  — full path to llama-finetune-lora binary (optional, auto-detected)
-  MODEL_PATH   — full path to the base .gguf model      (optional, auto-detected)
+  FABRIC_PATH   full path to llama-finetune-lora binary (optional, auto-detected)
+  MODEL_PATH    full path to the base .gguf model      (optional, auto-detected)
 """
 
 import sys
@@ -22,7 +22,7 @@ import json
 from pathlib import Path
 
 
-# ─── Load .env without external dependencies ─────────────────────────────────
+#  Load .env without external dependencies 
 def _load_dotenv(env_path: Path) -> None:
     if not env_path.exists():
         return
@@ -107,7 +107,12 @@ def find_model_gguf() -> Path:
 
 
 def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkpoint_dir: Path) -> list[str]:
-    """Build the llama-finetune-lora command line."""
+    """Build the llama-finetune-lora command line.
+
+    This QVAC Fabric binary only accepts the flags listed in its --help output.
+    No -ngl, -c, -b, -ub, -fa, or --flash-attn — those cause backend assertion failures.
+    Backend selection and context length are managed internally by the binary.
+    """
     args = [str(binary)]
 
     args.extend(["-m", str(model)])
@@ -123,16 +128,9 @@ def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkp
     args.extend(["--output-adapter", str(adapter_path)])
 
     training = config.get("training", {})
-    args.extend(["-c",  str(training.get("context_length", 512))])
-    args.extend(["-b",  str(training.get("batch_size", 4))])
-    args.extend(["-ub", str(training.get("ubatch_size", 512))])
-
     args.extend(["--learning-rate", str(training.get("learning_rate", "2e-4"))])
     args.extend(["--weight-decay",  str(training.get("weight_decay", "1e-2"))])
-    args.extend(["--epochs",        str(training.get("num_epochs", 3))])
-
-    # 999 = offload all layers to GPU if CUDA/Vulkan is available
-    args.extend(["-ngl", str(training.get("gpu_layers", 999))])
+    args.extend(["--num-epochs",    str(training.get("num_epochs", 3))])
 
     if training.get("assistant_loss_only", True):
         args.append("--assistant-loss-only")
@@ -140,28 +138,23 @@ def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkp
     args.extend(["--checkpoint-save-steps", str(training.get("checkpoint_steps", 100))])
     args.extend(["--checkpoint-save-dir",   str(checkpoint_dir)])
 
-    # Resume from the latest checkpoint if one exists
-    existing = sorted(checkpoint_dir.glob("checkpoint-*.gguf")) if checkpoint_dir.exists() else []
-    if existing:
-        latest = existing[-1]
-        args.extend(["--checkpoint-in", str(latest)])
-        print(f"  [↩] Resuming from checkpoint: {latest.name}")
-
-    if not training.get("flash_attention", False):
-        args.extend(["-fa", "off"])
+    # Auto-resume from latest checkpoint if one exists
+    if checkpoint_dir.exists() and any(checkpoint_dir.glob("checkpoint-*.gguf")):
+        args.append("--auto-resume")
+        print("  [resume] Auto-resuming from latest checkpoint")
 
     warmup = training.get("warmup_steps", 0)
     if warmup > 0:
         args.extend(["--warmup-steps", str(warmup)])
 
-    args.extend(["--lr-scheduler", training.get("lr_scheduler", "constant")])
+    args.extend(["--lr-scheduler", training.get("lr_scheduler", "cosine")])
 
     return args
 
 
 def show_command_preview(args: list[str]) -> None:
     print("\n" + "=" * 60)
-    print("🚀 COMMAND TO EXECUTE")
+    print(" COMMAND TO EXECUTE")
     print("=" * 60)
     cmd_str = " \\\n  ".join(args)
     print(f"\n  {cmd_str}\n")
@@ -169,7 +162,7 @@ def show_command_preview(args: list[str]) -> None:
 
 def main():
     print("=" * 60)
-    print("CARpsy — Step 4: Run Fine-Tuning (LOCAL)")
+    print("CARpsy  Step 4: Run Fine-Tuning (LOCAL)")
     print("=" * 60)
 
     checkpoint_dir = REPO_ROOT / "output" / "checkpoints"
@@ -183,31 +176,28 @@ def main():
         return
 
     try:
-        print("\n🔍 Locating llama-finetune-lora...")
+        print("\n[find] Locating llama-finetune-lora...")
         binary = find_llama_binary()
-        print(f"  [✓] Found: {binary}")
+        print(f"  [] Found: {binary}")
 
-        print("\n📦 Locating base GGUF model...")
+        print("\n[pkg] Locating base GGUF model...")
         model = find_model_gguf()
-        print(f"  [✓] Model: {model}")
+        print(f"  [] Model: {model}")
         print(f"      Size:  {model.stat().st_size / 1024 / 1024:.0f} MB")
 
-        print("\n⚙️  Loading configuration...")
+        print("\n  Loading configuration...")
         import yaml
         if CONFIG_PATH.exists():
             with open(CONFIG_PATH) as f:
                 config = yaml.safe_load(f)
         else:
             config = {"lora": {}, "training": {}}
-        print(f"  [✓] Config loaded")
+        print(f"  [] Config loaded")
 
-        print("\n📊 Dataset info:")
+        print("\n[stats] Dataset info:")
         with open(TRAIN_SPLIT, "r", encoding="utf-8") as f:
             train_lines = sum(1 for _ in f)
-        batch_size = config.get("training", {}).get("batch_size", 4)
         print(f"      Train examples: {train_lines}")
-        print(f"      Batch size:     {batch_size}")
-        print(f"      Steps/epoch:    {train_lines // batch_size}")
 
         args = build_command(binary, model, TRAIN_SPLIT, config, checkpoint_dir)
         show_command_preview(args)
@@ -220,7 +210,7 @@ def main():
             return
 
         print("\n" + "=" * 60)
-        print("🔥 FINE-TUNING STARTED")
+        print("[FIRE] FINE-TUNING STARTED")
         print("=" * 60)
         print("  (This may take hours depending on your hardware)\n")
 
@@ -229,25 +219,25 @@ def main():
         if result.returncode == 0:
             adapter = OUTPUT_DIR / "carpsy-adapter.gguf"
             if adapter.exists():
-                print(f"\n✅ FINE-TUNING COMPLETE")
+                print(f"\n[OK] FINE-TUNING COMPLETE")
                 print(f"   Adapter: {adapter}")
                 print(f"   Size:    {adapter.stat().st_size / 1024:.1f} KB")
-                print(f"\n📋 Next steps:")
+                print(f"\n[list] Next steps:")
                 print(f"   1. Validate: python scripts/06_validate_adapter.py")
                 print(f"   2. Test with llama-cli:")
                 print(f"      llama-cli -m {model} --lora {adapter} -ngl 999 \\")
                 print(f"        -p \"I have code P0420 on my Toyota. What does it mean?\"")
                 print(f"   3. Copy adapter to the OBDient project")
             else:
-                print(f"\n  ⚠️  Process finished but adapter file not found.")
+                print(f"\n  [WARN]  Process finished but adapter file not found.")
         else:
-            print(f"\n  ❌ Fine-tuning failed (exit code: {result.returncode})")
+            print(f"\n  [ERR] Fine-tuning failed (exit code: {result.returncode})")
             print("     Check the error messages above.")
 
     except FileNotFoundError as e:
-        print(f"\n  ❌ ERROR: {e}")
+        print(f"\n  [ERR] ERROR: {e}")
     except Exception as e:
-        print(f"\n  ❌ Unexpected error: {e}")
+        print(f"\n  [ERR] Unexpected error: {e}")
         raise
 
 
