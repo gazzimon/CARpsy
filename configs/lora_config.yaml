@@ -1,0 +1,42 @@
+# QVAC Fabric / QLoRA Configuration for OBDient Fine-Tuning
+# Target model: LLaMA 3.2 1B Instruct (Q4 quantized)
+
+model:
+  base: "llama-3.2-1b-instruct-q4_0"
+  # Alternative: usar el mismo ID que usa OBDient (LLAMA_3_2_1B_INST_Q4_0)
+
+dataset:
+  path: "data/splits/train.jsonl"
+  validation_path: "data/splits/val.jsonl"
+  format: "chat"  # system/user/assistant messages
+  max_examples: 10000  # limit for initial training
+
+lora:
+  rank: 8          # LoRA rank (8-16 recommended for QLoRA)
+  alpha: 16        # LoRA alpha (typically 2x rank)
+  dropout: 0.05    # Dropout for regularization
+  target_modules:
+    - "q_proj"
+    - "v_proj"
+    - "k_proj"
+    - "o_proj"
+
+training:
+  batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  num_epochs: 3
+  warmup_steps: 100
+  logging_steps: 10
+  save_steps: 500
+  max_seq_length: 512
+
+quantization:
+  # QLoRA uses 4-bit NF4 quantization of base model
+  bits: 4
+  double_quant: true
+  quant_type: "nf4"
+
+output:
+  adapter_dir: "output/adapter"
+  export_format: "safetensors"

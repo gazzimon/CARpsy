@@ -1,0 +1,18 @@
+# Core
+python-dotenv>=1.0.0
+pyyaml>=6.0
+
+# Data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# DTC database access
+gitpython>=3.1.40
+requests>=2.31.0
+
+# QVAC Fabric (fine-tuning SDK)
+# Instalar según documentación de QVAC Fabric
+# pip install qvac-fabric
+
+# Evaluation
+scikit-learn>=1.3.0

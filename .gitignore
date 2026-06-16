@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+.venv/
+venv/
+env/
+
+# Datasets (raw files are large)
+data/raw/*.db
+data/raw/*.sqlite
+data/raw/*.csv
+data/raw/*.json
+!data/raw/.gitkeep
+
+# Processed data
+data/processed/*.jsonl
+data/processed/*.parquet
+!data/processed/.gitkeep
+
+# Output
+output/adapter/*
+!output/adapter/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+wandb/
