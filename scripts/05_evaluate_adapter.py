@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
 """
-05_evaluate_adapter.py — Evalúa el adaptador LoRA fine-tuneado.
+05_evaluate_adapter.py — Structural evaluation of the fine-tuned LoRA adapter.
 
-Compara la calidad de las respuestas del modelo base vs el modelo
-fine-tuneado usando el test split.
+Analyzes the test split to assess:
+  - DTC code identification accuracy
+  - Critical severity detection rate
+  - Response structure quality (length, format)
+  - Manual side-by-side sample inspection
 
-Métricas:
-  - Exactitud de clasificación de severidad
-  - Precisión de identificación de código DTC
-  - Coherencia de la respuesta (longitud, estructura)
-  - Comparación lado a lado (sampling manual)
+Note: This is a structural evaluation (response format).
+      For real inference quality, use 06_validate_adapter.py.
+
+Metrics:
+  - Code identification rate
+  - Critical response rate
+  - Avg response length
+  - Structure rate
 """
 
 import sys
@@ -21,7 +27,7 @@ from typing import Optional
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import yaml
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
+REPO_ROOT  = Path(__file__).resolve().parent.parent
 SPLITS_DIR = REPO_ROOT / "data" / "splits"
 OUTPUT_DIR = REPO_ROOT / "output" / "adapter"
 CONFIG_PATH = REPO_ROOT / "configs" / "lora_config.yaml"
@@ -43,81 +49,60 @@ def load_jsonl(path: Path) -> list[dict]:
 
 
 def extract_code_from_user_message(user_msg: str) -> Optional[str]:
-    """Extrae código DTC del mensaje del usuario (ej: 'P0420')."""
+    """Extract a DTC code from the user message (e.g. 'P0420')."""
     import re
     match = re.search(r'[PBCU]\d{4}', user_msg.upper())
     return match.group(0) if match else None
 
 
 def extract_code_from_assistant(assistant_msg: str) -> Optional[str]:
-    """Extrae código DTC de la respuesta del asistente."""
+    """Extract a DTC code from the assistant response."""
     import re
     match = re.search(r'[PBCU]\d{4}', assistant_msg.upper())
     return match.group(0) if match else None
 
 
 def contains_critical_indicator(text: str) -> bool:
-    """Detecta si la respuesta indica un problema crítico."""
+    """Check whether the response flags a critical issue."""
     indicators = ["critical", "immediate", "not safe", "serious", "urgent", "⚠️"]
     return any(ind in text.lower() for ind in indicators)
 
 
 def evaluate_example(example: dict) -> dict:
-    """Evalúa un solo ejemplo del dataset."""
-    messages = example["messages"]
-    system_msg = next((m["content"] for m in messages if m["role"] == "system"), "")
-    user_msg = next((m["content"] for m in messages if m["role"] == "user"), "")
+    """Evaluate a single dataset example."""
+    messages     = example["messages"]
+    user_msg      = next((m["content"] for m in messages if m["role"] == "user"),      "")
     assistant_msg = next((m["content"] for m in messages if m["role"] == "assistant"), "")
 
-    results = {
-        "has_code_in_user": False,
-        "has_code_in_assistant": False,
-        "code_match": False,
-        "critical_detected": False,
-        "response_length": len(assistant_msg.split()),
-        "has_structure": False,
-    }
-
-    # Verificar códigos DTC
-    user_code = extract_code_from_user_message(user_msg)
+    user_code      = extract_code_from_user_message(user_msg)
     assistant_code = extract_code_from_assistant(assistant_msg)
 
-    if user_code:
-        results["has_code_in_user"] = True
-    if assistant_code:
-        results["has_code_in_assistant"] = True
-    if user_code and assistant_code:
-        results["code_match"] = user_code == assistant_code
-
-    # Verificar indicadores de severidad
-    results["critical_detected"] = contains_critical_indicator(assistant_msg)
-
-    # Verificar estructura (tiene ? o : o múltiples líneas)
-    results["has_structure"] = (
-        "?" in assistant_msg or ":" in assistant_msg or "\n" in assistant_msg
-    )
-
-    return results
+    return {
+        "has_code_in_user":      bool(user_code),
+        "has_code_in_assistant": bool(assistant_code),
+        "code_match":            bool(user_code and assistant_code and user_code == assistant_code),
+        "critical_detected":     contains_critical_indicator(assistant_msg),
+        "response_length":       len(assistant_msg.split()),
+        "has_structure":         (":" in assistant_msg or "\n" in assistant_msg),
+    }
 
 
 def generate_report(results: list[dict], total: int) -> dict:
-    """Genera un reporte de evaluación."""
     if not results:
         return {"error": "No results to evaluate"}
 
     return {
-        "total_evaluated": total,
-        "code_identification_rate": sum(r["code_match"] for r in results) / max(len(results), 1),
-        "critical_response_rate": sum(r["critical_detected"] for r in results) / max(len(results), 1),
-        "avg_response_length": sum(r["response_length"] for r in results) / max(len(results), 1),
-        "structure_rate": sum(r["has_structure"] for r in results) / max(len(results), 1),
-        "samples_with_code_in_user": sum(r["has_code_in_user"] for r in results),
+        "total_evaluated":          total,
+        "code_identification_rate": sum(r["code_match"]        for r in results) / max(len(results), 1),
+        "critical_response_rate":   sum(r["critical_detected"] for r in results) / max(len(results), 1),
+        "avg_response_length":      sum(r["response_length"]   for r in results) / max(len(results), 1),
+        "structure_rate":           sum(r["has_structure"]     for r in results) / max(len(results), 1),
+        "samples_with_code_in_user":      sum(r["has_code_in_user"]      for r in results),
         "samples_with_code_in_assistant": sum(r["has_code_in_assistant"] for r in results),
     }
 
 
 def print_report(report: dict) -> None:
-    """Imprime el reporte de evaluación formateado."""
     print("\n" + "=" * 60)
     print("📊 EVALUATION REPORT")
     print("=" * 60)
@@ -125,7 +110,7 @@ def print_report(report: dict) -> None:
     print(f"\n  📈 Metrics:")
     print(f"     Code identification rate:  {report['code_identification_rate']:.1%}")
     print(f"     Critical response rate:    {report['critical_response_rate']:.1%}")
-    print(f"     Avg response length:       {report['avg_response_length']:.0f} tokens")
+    print(f"     Avg response length:       {report['avg_response_length']:.0f} words")
     print(f"     Structure rate:            {report['structure_rate']:.1%}")
     print(f"  📝 Coverage:")
     print(f"     Samples with code in user:      {report['samples_with_code_in_user']}")
@@ -134,85 +119,75 @@ def print_report(report: dict) -> None:
 
 
 def show_samples(examples: list[dict], n: int = 3) -> None:
-    """Muestra ejemplos aleatorios del test set para inspección manual."""
     print("\n" + "=" * 60)
     print("📝 SAMPLE INSPECTION")
     print("=" * 60)
 
     samples = random.sample(examples, min(n, len(examples)))
     for i, example in enumerate(samples, 1):
-        messages = example["messages"]
-        user_msg = next((m["content"] for m in messages if m["role"] == "user"), "")
+        messages      = example["messages"]
+        user_msg      = next((m["content"] for m in messages if m["role"] == "user"),      "")
         assistant_msg = next((m["content"] for m in messages if m["role"] == "assistant"), "")
 
         print(f"\n  ─── Sample #{i} ───")
-        print(f"  👤 USER: {user_msg}")
+        print(f"  👤 USER:      {user_msg}")
         print(f"  🤖 ASSISTANT: {assistant_msg}")
-        print()
 
 
 def main():
     print("=" * 60)
-    print("CARpsy — Step 5: Evaluate Adapter")
+    print("CARpsy — Step 5: Evaluate Dataset Structure")
     print("=" * 60)
 
     config = load_config()
 
-    # Cargar test split
     test_path = SPLITS_DIR / "test.jsonl"
     if not test_path.exists():
-        print(f"\n  [!] No se encuentra {test_path}")
-        print("  [!] Ejecuta primero: python scripts/03_split_dataset.py")
+        print(f"\n  [!] Test split not found: {test_path}")
+        print("  [!] Run first: python scripts/03_split_dataset.py")
         return
 
-    print(f"\n📂 Cargando test split: {test_path}")
+    print(f"\n📂 Loading test split: {test_path}")
     test_examples = load_jsonl(test_path)
     print(f"  Total test examples: {len(test_examples)}")
 
-    if len(test_examples) == 0:
-        print("  [!] No hay ejemplos para evaluar")
+    if not test_examples:
+        print("  [!] No examples to evaluate")
         return
 
-    # Evaluar cada ejemplo
     print("\n🔬 Evaluating examples...")
-    results = [evaluate_example(ex) for ex in test_examples[:1000]]  # limit for speed
+    results = [evaluate_example(ex) for ex in test_examples[:1000]]
 
-    # Generar reporte
     report = generate_report(results, len(test_examples))
     print_report(report)
-
-    # Mostrar samples
     show_samples(test_examples, 3)
 
-    # Guardar reporte
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     report_path = OUTPUT_DIR / "evaluation_report.json"
-    report["sample_results"] = results[:10]  # solo primeros 10
+    report["sample_results"] = results[:10]
     with open(report_path, "w", encoding="utf-8") as f:
         json.dump(report, f, indent=2, ensure_ascii=False)
-    print(f"\n  Reporte guardado en {report_path}")
+    print(f"\n  Report saved to {report_path}")
 
-    # Nota sobre evaluación real
     print("\n" + "=" * 60)
-    print("📋 NOTAS SOBRE EVALUACIÓN REAL")
+    print("📋 NOTE ON REAL EVALUATION")
     print("=" * 60)
     print("""
-  Esta es una evaluación ESTRUCTURAL (formato de las respuestas).
-  Para una evaluación real de calidad necesitas:
+  This is a STRUCTURAL evaluation (response format check).
+  For true inference quality you need:
 
-  1. Ejecutar inferencia con el modelo base + adaptador fine-tuneado
-     usando qvacSDK.completion() en un dispositivo real
+  1. Run live inference with base model + fine-tuned adapter
+     using llama-cli or the QVAC SDK
 
-  2. Comparar las respuestas generadas vs las esperadas usando:
-     - BLEU score (similitud textual)
-     - Precisión de clasificación de severidad
-     - Evaluación humana (side-by-side)
+  2. Compare generated vs expected responses using:
+     - BLEU score (textual similarity)
+     - Severity classification accuracy
+     - Human side-by-side evaluation
 
-  3. Probar en OBDient real con datos OBD-II vivos
+  3. Test in OBDient with live OBD-II data
 
-  El verdadero test es: ¿el modelo fine-tuneado da mejores diagnósticos
-  que el modelo base + RAG? Eso solo se puede medir en producción.
+  Run: python scripts/06_validate_adapter.py
 """)
-
     print("✅ Step 5 complete.")
 
 

@@ -1,42 +1,39 @@
-# QVAC Fabric / QLoRA Configuration for OBDient Fine-Tuning
-# Target model: LLaMA 3.2 1B Instruct (Q4 quantized)
+# CARpsy — QVAC Fabric LoRA Training Configuration
+# Recommended model: Qwen3-1.7B-Q4_K_M
+# Repo: https://github.com/tetherto/qvac-fabric-llm.cpp
 
 model:
-  base: "llama-3.2-1b-instruct-q4_0"
-  # Alternative: usar el mismo ID que usa OBDient (LLAMA_3_2_1B_INST_Q4_0)
+  # Recommended for QVAC hackathon — natively tested architecture
+  base: "models/qwen3-1.7b-q4_k_m.gguf"
+  # Fallback: LLaMA 3.2 1B (also supported but not QVAC-native)
+  # base: "models/llama-3.2-1b-instruct-q4_k_m.gguf"
 
 dataset:
-  path: "data/splits/train.jsonl"
+  path:            "data/splits/train.jsonl"
   validation_path: "data/splits/val.jsonl"
-  format: "chat"  # system/user/assistant messages
-  max_examples: 10000  # limit for initial training
+  format:          "chat"   # system / user / assistant messages
+  max_examples:    10000    # cap for initial training run
 
 lora:
-  rank: 8          # LoRA rank (8-16 recommended for QLoRA)
-  alpha: 16        # LoRA alpha (typically 2x rank)
-  dropout: 0.05    # Dropout for regularization
+  rank:   8     # --lora-rank  (8–16 recommended)
+  alpha:  16    # --lora-alpha (typically 2× rank)
+  dropout: 0.05
   target_modules:
-    - "q_proj"
-    - "v_proj"
-    - "k_proj"
-    - "o_proj"
+    - "attn_q"
+    - "attn_k"
+    - "attn_v"
+    - "attn_o"
 
 training:
-  batch_size: 4
-  gradient_accumulation_steps: 4
-  learning_rate: 2.0e-4
-  num_epochs: 3
-  warmup_steps: 100
-  logging_steps: 10
-  save_steps: 500
-  max_seq_length: 512
-
-quantization:
-  # QLoRA uses 4-bit NF4 quantization of base model
-  bits: 4
-  double_quant: true
-  quant_type: "nf4"
-
-output:
-  adapter_dir: "output/adapter"
-  export_format: "safetensors"
+  context_length:       512    # -c  (mobile-optimised)
+  batch_size:           4      # -b
+  ubatch_size:          512    # -ub
+  learning_rate:        2.0e-4 # --learning-rate
+  weight_decay:         1.0e-2 # --weight-decay
+  num_epochs:           3      # --epochs
+  gpu_layers:           999    # -ngl (999 = all layers on GPU)
+  assistant_loss_only:  true   # --assistant-loss-only (SFT only on assistant tokens)
+  flash_attention:      false
+  checkpoint_steps:     100    # --checkpoint-save-steps
+  warmup_steps:         0
+  lr_scheduler:         "cosine"  # constant | cosine | linear

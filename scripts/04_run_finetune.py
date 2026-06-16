@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-04_run_finetune.py — Ejecuta fine-tuning LoRA LOCAL con llama-finetune-lora.
+04_run_finetune.py — Run LoRA fine-tuning locally with llama-finetune-lora.
 
-QVAC Fabric = llama.cpp. No hay API, no hay cloud.
-Este script construye el comando y ejecuta el binario local.
+QVAC Fabric = qvac-fabric-llm.cpp (llama.cpp fork with LoRA training support).
+No cloud API, no data leaves your machine.
 
-Requisitos:
-  1. Compilar qvac-fabric-llm.cpp (llama.cpp fork)
-  2. Tener el binario llama-finetune-lora disponible
-  3. Tener el modelo base GGUF descargado
+Prerequisites:
+  1. Compile qvac-fabric-llm.cpp  →  https://github.com/tetherto/qvac-fabric-llm.cpp
+  2. Have the llama-finetune-lora binary available
+  3. Download the base GGUF model into models/
+
+Environment variables (set in .env):
+  FABRIC_PATH  — full path to llama-finetune-lora binary (optional, auto-detected)
+  MODEL_PATH   — full path to the base .gguf model      (optional, auto-detected)
 """
 
 import sys
@@ -17,7 +21,8 @@ import subprocess
 import json
 from pathlib import Path
 
-# Cargar .env si existe (sin dependencias externas)
+
+# ─── Load .env without external dependencies ─────────────────────────────────
 def _load_dotenv(env_path: Path) -> None:
     if not env_path.exists():
         return
@@ -29,35 +34,32 @@ def _load_dotenv(env_path: Path) -> None:
             key, _, value = line.partition("=")
             os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
 
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _load_dotenv(REPO_ROOT / ".env")
+
 TRAIN_SPLIT = REPO_ROOT / "data" / "splits" / "train.jsonl"
-VAL_SPLIT = REPO_ROOT / "data" / "splits" / "val.jsonl"
-MODEL_DIR = REPO_ROOT / "models"
-OUTPUT_DIR = REPO_ROOT / "output" / "adapter"
+VAL_SPLIT   = REPO_ROOT / "data" / "splits" / "val.jsonl"
+MODEL_DIR   = REPO_ROOT / "models"
+OUTPUT_DIR  = REPO_ROOT / "output" / "adapter"
 CONFIG_PATH = REPO_ROOT / "configs" / "training_config.yaml"
 
 
 def find_llama_binary() -> Path:
-    """Busca el binario llama-finetune-lora. Prioriza FABRIC_PATH del entorno."""
-    # Variable de entorno tiene máxima prioridad
+    """Find the llama-finetune-lora binary. FABRIC_PATH env var takes priority."""
     env_path = os.environ.get("FABRIC_PATH")
     if env_path:
         p = Path(env_path)
         if p.exists() and os.access(p, os.X_OK):
             return p
-        raise FileNotFoundError(f"FABRIC_PATH={env_path} no existe o no es ejecutable.")
+        raise FileNotFoundError(f"FABRIC_PATH={env_path} does not exist or is not executable.")
 
     candidates = [
-        # Ya descargado en Documents
         Path("C:/Users/User/Documents/llama-b7349-bin/llama-finetune-lora.exe"),
-        # Windows - compilación con MSVC
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/Release/llama-finetune-lora.exe"),
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/llama-finetune-lora.exe"),
-        # En PATH
         Path("llama-finetune-lora.exe"),
         Path("llama-finetune-lora"),
-        # Linux/Mac
         Path("/usr/local/bin/llama-finetune-lora"),
         Path("./llama-finetune-lora"),
     ]
@@ -65,140 +67,104 @@ def find_llama_binary() -> Path:
     for candidate in candidates:
         if candidate.exists() and os.access(candidate, os.X_OK):
             return candidate
-        # Si es solo nombre (en PATH), probar con where/which
-        if candidate.suffix in (".exe", "") and len(candidate.parts) == 1:
+        if len(candidate.parts) == 1:
             try:
-                if os.name == "nt":
-                    subprocess.run(
-                        ["where", str(candidate)],
-                        capture_output=True, check=True
-                    )
-                else:
-                    subprocess.run(
-                        ["which", str(candidate)],
-                        capture_output=True, check=True
-                    )
+                cmd = ["where" if os.name == "nt" else "which", str(candidate)]
+                subprocess.run(cmd, capture_output=True, check=True)
                 return candidate
             except subprocess.CalledProcessError:
                 continue
 
     raise FileNotFoundError(
-        "No se encontró llama-finetune-lora.\n\n"
-        "1. Clona: git clone https://github.com/tetherto/qvac-fabric-llm.cpp.git\n"
-        "2. Compila:\n"
-        "   cd qvac-fabric-llm.cpp && mkdir build && cd build\n"
-        "   cmake .. -DLLAMA_CUDA=OFF && cmake --build . --config Release\n"
-        "3. Asegúrate que el binario esté en PATH o configura FABRIC_PATH en .env"
+        "llama-finetune-lora not found.\n\n"
+        "1. Clone:   git clone https://github.com/tetherto/qvac-fabric-llm.cpp.git\n"
+        "2. Build:   cd qvac-fabric-llm.cpp && mkdir build && cd build\n"
+        "            cmake .. -DLLAMA_CUDA=OFF && cmake --build . --config Release\n"
+        "3. Set:     FABRIC_PATH=/path/to/llama-finetune-lora in your .env"
     )
 
 
 def find_model_gguf() -> Path:
-    """Busca el modelo base GGUF. Prioriza MODEL_PATH del entorno."""
+    """Find the base GGUF model. MODEL_PATH env var takes priority."""
     env_path = os.environ.get("MODEL_PATH")
     if env_path:
         p = Path(env_path)
         if p.exists():
             return p
-        raise FileNotFoundError(f"MODEL_PATH={env_path} no existe.")
+        raise FileNotFoundError(f"MODEL_PATH={env_path} does not exist.")
 
     gguf_files = list(MODEL_DIR.glob("*.gguf"))
     if not gguf_files:
         raise FileNotFoundError(
-            f"No se encontró modelo GGUF en {MODEL_DIR}/\n\n"
-            "Opciones:\n"
-            "  A) Descarga LLaMA 3.2 1B Instruct Q4_K_M:\n"
-            "     https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF\n"
-            "     y colócalo en models/\n\n"
-            "  B) Define MODEL_PATH=/ruta/al/modelo.gguf en tu archivo .env"
+            f"No GGUF model found in {MODEL_DIR}/\n\n"
+            "Options:\n"
+            "  A) Download Qwen3-1.7B-Q4_K_M (recommended for QVAC hackathon):\n"
+            "     https://huggingface.co/Qwen/Qwen3-1.7B-GGUF\n"
+            "     Place the .gguf file in models/\n\n"
+            "  B) Or define MODEL_PATH=/path/to/model.gguf in your .env"
         )
     return gguf_files[0]
 
 
-def build_command(
-    binary: Path,
-    model: Path,
-    dataset: Path,
-    config: dict,
-) -> list[str]:
-    """Construye la línea de comandos para llama-finetune-lora."""
+def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkpoint_dir: Path) -> list[str]:
+    """Build the llama-finetune-lora command line."""
     args = [str(binary)]
 
-    # Modelo y dataset
     args.extend(["-m", str(model)])
     args.extend(["-f", str(dataset)])
 
-    # LoRA configuration
     lora = config.get("lora", {})
-    args.extend(["--lora-rank", str(lora.get("rank", 8))])
-    args.extend(["--lora-alpha", str(lora.get("alpha", 16))])
+    args.extend(["--lora-rank",    str(lora.get("rank", 8))])
+    args.extend(["--lora-alpha",   str(lora.get("alpha", 16))])
     modules = lora.get("target_modules", ["attn_q", "attn_k", "attn_v", "attn_o"])
     args.extend(["--lora-modules", ",".join(modules)])
 
-    # Output adapter
-    adapter_path = OUTPUT_DIR / "obdient-adapter.gguf"
+    adapter_path = OUTPUT_DIR / "carpsy-adapter.gguf"
     args.extend(["--output-adapter", str(adapter_path)])
 
-    # Training parameters
     training = config.get("training", {})
-    args.extend(["-c", str(training.get("context_length", 512))])
-    args.extend(["-b", str(training.get("batch_size", 4))])
+    args.extend(["-c",  str(training.get("context_length", 512))])
+    args.extend(["-b",  str(training.get("batch_size", 4))])
     args.extend(["-ub", str(training.get("ubatch_size", 512))])
 
-    lr = training.get("learning_rate", "2e-4")
-    args.extend(["--learning-rate", str(lr)])
-    args.extend(["--weight-decay", str(training.get("weight_decay", "1e-2"))])
+    args.extend(["--learning-rate", str(training.get("learning_rate", "2e-4"))])
+    args.extend(["--weight-decay",  str(training.get("weight_decay", "1e-2"))])
+    args.extend(["--epochs",        str(training.get("num_epochs", 3))])
 
-    epochs = training.get("num_epochs", 3)
-    args.extend(["--epochs", str(epochs)])
-
-    # GPU layers (999 = todas las capas en GPU si hay CUDA)
+    # 999 = offload all layers to GPU if CUDA/Vulkan is available
     args.extend(["-ngl", str(training.get("gpu_layers", 999))])
 
-    # SFT con assistant-loss-only
-    if config.get("training", {}).get("assistant_loss_only", True):
+    if training.get("assistant_loss_only", True):
         args.append("--assistant-loss-only")
 
-    # Checkpointing
-    checkpoint_dir = REPO_ROOT / "output" / "checkpoints"
-    args.extend([
-        "--checkpoint-save-steps",
-        str(training.get("checkpoint_steps", 100)),
-    ])
-    args.extend(["--checkpoint-save-dir", str(checkpoint_dir)])
+    args.extend(["--checkpoint-save-steps", str(training.get("checkpoint_steps", 100))])
+    args.extend(["--checkpoint-save-dir",   str(checkpoint_dir)])
 
-    # Resume desde checkpoint si existe
-    existing_checkpoints = sorted(checkpoint_dir.glob("checkpoint-*.gguf")) if checkpoint_dir.exists() else []
-    if existing_checkpoints:
-        latest = existing_checkpoints[-1]
+    # Resume from the latest checkpoint if one exists
+    existing = sorted(checkpoint_dir.glob("checkpoint-*.gguf")) if checkpoint_dir.exists() else []
+    if existing:
+        latest = existing[-1]
         args.extend(["--checkpoint-in", str(latest)])
-        print(f"  [↩] Resume desde checkpoint: {latest.name}")
+        print(f"  [↩] Resuming from checkpoint: {latest.name}")
 
-    # Flash attention
     if not training.get("flash_attention", False):
-        args.append("-fa")
-        args.append("off")
+        args.extend(["-fa", "off"])
 
-    # Warmup
     warmup = training.get("warmup_steps", 0)
     if warmup > 0:
         args.extend(["--warmup-steps", str(warmup)])
 
-    # Scheduler
-    scheduler = training.get("lr_scheduler", "constant")
-    args.extend(["--lr-scheduler", scheduler])
+    args.extend(["--lr-scheduler", training.get("lr_scheduler", "constant")])
 
     return args
 
 
 def show_command_preview(args: list[str]) -> None:
-    """Muestra el comando que se va a ejecutar."""
     print("\n" + "=" * 60)
-    print("🚀 COMANDO A EJECUTAR")
+    print("🚀 COMMAND TO EXECUTE")
     print("=" * 60)
-    # Formato legible
     cmd_str = " \\\n  ".join(args)
-    print(f"\n  {cmd_str}")
-    print()
+    print(f"\n  {cmd_str}\n")
 
 
 def main():
@@ -206,98 +172,82 @@ def main():
     print("CARpsy — Step 4: Run Fine-Tuning (LOCAL)")
     print("=" * 60)
 
-    # Crear directorios
+    checkpoint_dir = REPO_ROOT / "output" / "checkpoints"
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    (REPO_ROOT / "output" / "checkpoints").mkdir(parents=True, exist_ok=True)
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
     MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Verificar dataset
     if not TRAIN_SPLIT.exists():
-        print(f"\n  [!] No se encuentra {TRAIN_SPLIT}")
-        print("  [!] Ejecuta primero: python scripts/03_split_dataset.py")
+        print(f"\n  [!] Training split not found: {TRAIN_SPLIT}")
+        print("  [!] Run first: python scripts/03_split_dataset.py")
         return
 
-    # Verificar dataset de validación
-    val_dataset = VAL_SPLIT if VAL_SPLIT.exists() else TRAIN_SPLIT
-
     try:
-        # 1. Encontrar binario
-        print("\n🔍 Buscando llama-finetune-lora...")
+        print("\n🔍 Locating llama-finetune-lora...")
         binary = find_llama_binary()
-        print(f"  [✓] Encontrado: {binary}")
+        print(f"  [✓] Found: {binary}")
 
-        # 2. Encontrar modelo
-        print("\n📦 Buscando modelo base GGUF...")
+        print("\n📦 Locating base GGUF model...")
         model = find_model_gguf()
-        print(f"  [✓] Modelo: {model}")
-        print(f"      Tamaño: {model.stat().st_size / 1024 / 1024:.0f} MB")
+        print(f"  [✓] Model: {model}")
+        print(f"      Size:  {model.stat().st_size / 1024 / 1024:.0f} MB")
 
-        # 3. Cargar configuración
-        print("\n⚙️  Cargando configuración...")
+        print("\n⚙️  Loading configuration...")
         import yaml
         if CONFIG_PATH.exists():
             with open(CONFIG_PATH) as f:
                 config = yaml.safe_load(f)
         else:
             config = {"lora": {}, "training": {}}
-        print(f"  [✓] Configuración cargada")
+        print(f"  [✓] Config loaded")
 
-        # 4. Estadísticas del dataset
-        print("\n📊 Dataset:")
+        print("\n📊 Dataset info:")
         with open(TRAIN_SPLIT, "r", encoding="utf-8") as f:
             train_lines = sum(1 for _ in f)
+        batch_size = config.get("training", {}).get("batch_size", 4)
         print(f"      Train examples: {train_lines}")
-        print(f"      Batch size: {config.get('training', {}).get('batch_size', 4)}")
-        print(f"      Steps por época: {train_lines // config.get('training', {}).get('batch_size', 4)}")
+        print(f"      Batch size:     {batch_size}")
+        print(f"      Steps/epoch:    {train_lines // batch_size}")
 
-        # 5. Construir y mostrar comando
-        args = build_command(binary, model, TRAIN_SPLIT, config)
+        args = build_command(binary, model, TRAIN_SPLIT, config, checkpoint_dir)
         show_command_preview(args)
 
-        # 6. Confirmar
-        print("  Presiona ENTER para comenzar el fine-tuning (Ctrl+C para cancelar)...")
+        print("  Press ENTER to start fine-tuning (Ctrl+C to cancel)...")
         try:
             input()
         except KeyboardInterrupt:
-            print("\n  Cancelado.")
+            print("\n  Cancelled.")
             return
 
-        # 7. Ejecutar
         print("\n" + "=" * 60)
-        print("🔥 INICIANDO FINE-TUNING")
+        print("🔥 FINE-TUNING STARTED")
         print("=" * 60)
-        print("  (Esto puede tomar horas dependiendo de tu hardware)")
-        print()
+        print("  (This may take hours depending on your hardware)\n")
 
         result = subprocess.run(args, check=False)
 
         if result.returncode == 0:
-            adapter = OUTPUT_DIR / "obdient-adapter.gguf"
+            adapter = OUTPUT_DIR / "carpsy-adapter.gguf"
             if adapter.exists():
-                print(f"\n✅ FINE-TUNING COMPLETADO")
-                print(f"   Adaptador: {adapter}")
-                print(f"   Tamaño: {adapter.stat().st_size / 1024:.1f} KB")
-                print(f"\n📋 Próximos pasos:")
-                print(f"   1. Evaluar: python scripts/05_evaluate_adapter.py")
-                print(f"   2. Probar con llama-cli:")
+                print(f"\n✅ FINE-TUNING COMPLETE")
+                print(f"   Adapter: {adapter}")
+                print(f"   Size:    {adapter.stat().st_size / 1024:.1f} KB")
+                print(f"\n📋 Next steps:")
+                print(f"   1. Validate: python scripts/06_validate_adapter.py")
+                print(f"   2. Test with llama-cli:")
                 print(f"      llama-cli -m {model} --lora {adapter} -ngl 999 \\")
                 print(f"        -p \"I have code P0420 on my Toyota. What does it mean?\"")
-                print(f"   3. Copiar adaptador al proyecto OBDient")
+                print(f"   3. Copy adapter to the OBDient project")
             else:
-                print(f"\n  ⚠️  El proceso terminó pero no se encontró el adaptador.")
+                print(f"\n  ⚠️  Process finished but adapter file not found.")
         else:
-            print(f"\n  ❌ Error durante fine-tuning (código: {result.returncode})")
-            print("     Revisa los mensajes de error arriba.")
+            print(f"\n  ❌ Fine-tuning failed (exit code: {result.returncode})")
+            print("     Check the error messages above.")
 
     except FileNotFoundError as e:
         print(f"\n  ❌ ERROR: {e}")
-        print("\n  Soluciones rápidas:")
-        print("  1. Clona: git clone https://github.com/tetherto/qvac-fabric-llm.cpp.git")
-        print("  2. Compila: cd qvac-fabric-llm.cpp && mkdir build && cd build")
-        print("     cmake .. && cmake --build . --config Release")
-        print("  3. Descarga modelo GGUF en models/")
     except Exception as e:
-        print(f"\n  ❌ Error inesperado: {e}")
+        print(f"\n  ❌ Unexpected error: {e}")
         raise
 
 

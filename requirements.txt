@@ -1,17 +1,26 @@
-# Core
+# CARpsy — Python dependencies
+#
+# Python 3.11+ required (install from https://www.python.org/downloads/)
+# DO NOT install from the Microsoft Store — that version is a stub (0 bytes).
+#
+# Install:  pip install -r requirements.txt
+
+# Configuration parsing
 pyyaml>=6.0
 
 # Data processing
 pandas>=2.0.0
 numpy>=1.24.0
 
-# DTC database access
+# DTC database download
 gitpython>=3.1.40
 requests>=2.31.0
 
-# Evaluation
+# Evaluation metrics (step 5)
 scikit-learn>=1.3.0
 
-# Nota: python-dotenv NO es necesario — el .env se carga manualmente en cada script.
-# Nota: QVAC Fabric es un binario local (llama.cpp), NO se instala con pip.
-#   Compilar desde: https://github.com/tetherto/qvac-fabric-llm.cpp
+# ── Notes ──────────────────────────────────────────────────────────────────
+# python-dotenv is NOT needed — .env is parsed inline in each script.
+#
+# QVAC Fabric is a LOCAL BINARY (llama.cpp fork), not a pip package.
+# Compile it from: https://github.com/tetherto/qvac-fabric-llm.cpp

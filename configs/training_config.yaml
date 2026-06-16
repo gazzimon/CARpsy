@@ -1,28 +1,26 @@
-# Configuración para llama-finetune-lora (QVAC Fabric)
-# Referencia: https://github.com/tetherto/qvac-fabric-llm.cpp
-
-model:
-  base: "models/llama-3.2-1b-q4.gguf"
+# CARpsy — llama-finetune-lora training arguments
+# These values map directly to CLI flags of qvac-fabric-llm.cpp
+# Reference: https://github.com/tetherto/qvac-fabric-llm.cpp
 
 lora:
-  rank: 8                # --lora-rank (default: 8)
-  alpha: 16              # --lora-alpha (default: 16) - alpha = 2x rank
-  modules:               # --lora-modules
+  rank:   8     # --lora-rank
+  alpha:  16    # --lora-alpha
+  target_modules:
     - "attn_q"
     - "attn_k"
     - "attn_v"
     - "attn_o"
 
 training:
-  context_length: 512    # -c (512 recomendado para mobile)
-  batch_size: 4          # -b
-  ubatch_size: 512       # -ub
-  learning_rate: 2.0e-4  # --learning-rate (default: 1e-5)
-  weight_decay: 1.0e-2   # --weight-decay (default: 1e-2)
-  num_epochs: 3          # --epochs
-  gpu_layers: 999        # -ngl (999 = todas las capas en GPU)
-  assistant_loss_only: true  # --assistant-loss-only
-  flash_attention: false     # -fa off
-  checkpoint_steps: 100      # --checkpoint-save-steps
-  warmup_steps: 0            # --warmup-steps
-  lr_scheduler: "constant"   # --lr-scheduler (constant, cosine, linear)
+  context_length:      512     # -c
+  batch_size:          4       # -b
+  ubatch_size:         512     # -ub
+  learning_rate:       2.0e-4  # --learning-rate
+  weight_decay:        1.0e-2  # --weight-decay
+  num_epochs:          3       # --epochs
+  gpu_layers:          999     # -ngl
+  assistant_loss_only: true    # --assistant-loss-only
+  flash_attention:     false
+  checkpoint_steps:    100     # --checkpoint-save-steps
+  warmup_steps:        0
+  lr_scheduler:        "cosine"
