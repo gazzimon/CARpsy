@@ -1,5 +1,4 @@
 # Core
-python-dotenv>=1.0.0
 pyyaml>=6.0
 
 # Data processing
@@ -10,9 +9,9 @@ numpy>=1.24.0
 gitpython>=3.1.40
 requests>=2.31.0
 
-# QVAC Fabric (fine-tuning SDK)
-# Instalar según documentación de QVAC Fabric
-# pip install qvac-fabric
-
 # Evaluation
 scikit-learn>=1.3.0
+
+# Nota: python-dotenv NO es necesario — el .env se carga manualmente en cada script.
+# Nota: QVAC Fabric es un binario local (llama.cpp), NO se instala con pip.
+#   Compilar desde: https://github.com/tetherto/qvac-fabric-llm.cpp

@@ -259,6 +259,39 @@ def create_multi_code_example(codes: list[dict]) -> Optional[dict]:
     }
 
 
+MAX_TOKENS_PER_EXAMPLE = 512  # coincide con context_length del entrenamiento
+
+
+def estimate_tokens(text: str) -> int:
+    """Aproximación rápida: 1 token ≈ 4 caracteres."""
+    return len(text) // 4
+
+
+def deduplicate(examples: list[dict]) -> tuple[list[dict], int]:
+    """Elimina ejemplos duplicados basándose en el mensaje del usuario."""
+    seen: set[str] = set()
+    unique: list[dict] = []
+    for ex in examples:
+        user_msg = next((m["content"] for m in ex["messages"] if m["role"] == "user"), "")
+        if user_msg not in seen:
+            seen.add(user_msg)
+            unique.append(ex)
+    return unique, len(examples) - len(unique)
+
+
+def filter_by_token_limit(examples: list[dict], max_tokens: int) -> tuple[list[dict], int]:
+    """Descarta ejemplos cuya longitud total supera max_tokens."""
+    valid: list[dict] = []
+    skipped = 0
+    for ex in examples:
+        total = sum(estimate_tokens(m["content"]) for m in ex["messages"])
+        if total <= max_tokens:
+            valid.append(ex)
+        else:
+            skipped += 1
+    return valid, skipped
+
+
 def save_dataset(examples: list[dict], filename: str) -> None:
     """Guarda el dataset en formato JSONL."""
     output_path = PROCESSED_DIR / filename
@@ -329,8 +362,17 @@ def main():
             break
     print(f"  Generados: {len(multi_examples)} ejemplos multi-código")
 
-    # ─── Combinar y guardar ─────────────────────────────────────────────────
+    # ─── Combinar ───────────────────────────────────────────────────────────
     all_examples = single_examples + multi_examples
+
+    # ─── Validación de calidad ──────────────────────────────────────────────
+    print("\n🔍 Validando calidad del dataset...")
+    all_examples, dupes = deduplicate(all_examples)
+    print(f"  Duplicados eliminados: {dupes}")
+
+    all_examples, too_long = filter_by_token_limit(all_examples, MAX_TOKENS_PER_EXAMPLE)
+    print(f"  Ejemplos descartados por longitud (>{MAX_TOKENS_PER_EXAMPLE} tokens): {too_long}")
+
     random.shuffle(all_examples)
 
     print(f"\n📊 Total ejemplos generados: {len(all_examples)}")
@@ -352,6 +394,9 @@ def main():
         "total_examples": len(all_examples),
         "single_code": len(single_examples),
         "multi_code": len(multi_examples),
+        "duplicates_removed": dupes,
+        "too_long_removed": too_long,
+        "max_tokens_per_example": MAX_TOKENS_PER_EXAMPLE,
         "estimated_tokens": total_tokens,
         "system_prompt": SYSTEM_PROMPT,
     }

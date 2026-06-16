@@ -17,7 +17,20 @@ import subprocess
 import json
 from pathlib import Path
 
+# Cargar .env si existe (sin dependencias externas)
+def _load_dotenv(env_path: Path) -> None:
+    if not env_path.exists():
+        return
+    with open(env_path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, _, value = line.partition("=")
+            os.environ.setdefault(key.strip(), value.strip().strip('"').strip("'"))
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
+_load_dotenv(REPO_ROOT / ".env")
 TRAIN_SPLIT = REPO_ROOT / "data" / "splits" / "train.jsonl"
 VAL_SPLIT = REPO_ROOT / "data" / "splits" / "val.jsonl"
 MODEL_DIR = REPO_ROOT / "models"
@@ -26,7 +39,15 @@ CONFIG_PATH = REPO_ROOT / "configs" / "training_config.yaml"
 
 
 def find_llama_binary() -> Path:
-    """Busca el binario llama-finetune-lora en ubicaciones comunes."""
+    """Busca el binario llama-finetune-lora. Prioriza FABRIC_PATH del entorno."""
+    # Variable de entorno tiene máxima prioridad
+    env_path = os.environ.get("FABRIC_PATH")
+    if env_path:
+        p = Path(env_path)
+        if p.exists() and os.access(p, os.X_OK):
+            return p
+        raise FileNotFoundError(f"FABRIC_PATH={env_path} no existe o no es ejecutable.")
+
     candidates = [
         # Ya descargado en Documents
         Path("C:/Users/User/Documents/llama-b7349-bin/llama-finetune-lora.exe"),
@@ -72,14 +93,23 @@ def find_llama_binary() -> Path:
 
 
 def find_model_gguf() -> Path:
-    """Busca el modelo base GGUF en models/."""
+    """Busca el modelo base GGUF. Prioriza MODEL_PATH del entorno."""
+    env_path = os.environ.get("MODEL_PATH")
+    if env_path:
+        p = Path(env_path)
+        if p.exists():
+            return p
+        raise FileNotFoundError(f"MODEL_PATH={env_path} no existe.")
+
     gguf_files = list(MODEL_DIR.glob("*.gguf"))
     if not gguf_files:
         raise FileNotFoundError(
             f"No se encontró modelo GGUF en {MODEL_DIR}/\n\n"
-            "Descarga LLaMA 3.2 1B Instruct Q4_K_M desde:\n"
-            "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF\n\n"
-            "O usa el modelo que ya descargó OBDient en el teléfono."
+            "Opciones:\n"
+            "  A) Descarga LLaMA 3.2 1B Instruct Q4_K_M:\n"
+            "     https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF\n"
+            "     y colócalo en models/\n\n"
+            "  B) Define MODEL_PATH=/ruta/al/modelo.gguf en tu archivo .env"
         )
     return gguf_files[0]
 
@@ -135,6 +165,13 @@ def build_command(
         str(training.get("checkpoint_steps", 100)),
     ])
     args.extend(["--checkpoint-save-dir", str(checkpoint_dir)])
+
+    # Resume desde checkpoint si existe
+    existing_checkpoints = sorted(checkpoint_dir.glob("checkpoint-*.gguf")) if checkpoint_dir.exists() else []
+    if existing_checkpoints:
+        latest = existing_checkpoints[-1]
+        args.extend(["--checkpoint-in", str(latest)])
+        print(f"  [↩] Resume desde checkpoint: {latest.name}")
 
     # Flash attention
     if not training.get("flash_attention", False):
