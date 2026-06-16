@@ -28,6 +28,8 @@ CONFIG_PATH = REPO_ROOT / "configs" / "training_config.yaml"
 def find_llama_binary() -> Path:
     """Busca el binario llama-finetune-lora en ubicaciones comunes."""
     candidates = [
+        # Ya descargado en Documents
+        Path("C:/Users/User/Documents/llama-b7349-bin/llama-finetune-lora.exe"),
         # Windows - compilación con MSVC
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/Release/llama-finetune-lora.exe"),
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/llama-finetune-lora.exe"),
