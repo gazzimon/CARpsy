@@ -21,9 +21,19 @@ data/processed/*.jsonl
 data/processed/*.parquet
 !data/processed/.gitkeep
 
+# Splits
+data/splits/*.jsonl
+!data/splits/.gitkeep
+
+# Models (too large for git, download separately)
+models/*.gguf
+!models/.gitkeep
+
 # Output
 output/adapter/*
 !output/adapter/.gitkeep
+output/checkpoints/*
+!output/checkpoints/.gitkeep
 
 # IDE
 .vscode/
