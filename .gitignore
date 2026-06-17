@@ -21,9 +21,7 @@ data/processed/*.jsonl
 data/processed/*.parquet
 !data/processed/.gitkeep
 
-# Splits
-data/splits/*.jsonl
-!data/splits/.gitkeep
+# Splits — incluidos en repo para reproducibilidad en Colab
 
 # Models (too large for git, download separately)
 models/*.gguf
