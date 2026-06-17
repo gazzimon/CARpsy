@@ -62,13 +62,15 @@ Write-Host "=== Building llama-finetune-lora ==="
 
 if ($LASTEXITCODE -ne 0) { Write-Error "Build failed"; exit 1 }
 
-# Copy the binary and required DLLs
+# Copy the binary and all DLLs needed at runtime
 New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
-$builtExe = Join-Path $buildDir "bin\Release\llama-finetune-lora.exe"
-Copy-Item $builtExe $OutputDir -Force
+$binRelease = Join-Path $buildDir "bin\Release"
+Get-ChildItem $binRelease -Filter "llama-finetune-lora.exe" | Copy-Item -Destination $OutputDir -Force
+Get-ChildItem $binRelease -Filter "*.dll" | Copy-Item -Destination $OutputDir -Force
 Write-Host ""
 Write-Host "=== Build complete ==="
-Write-Host "Binary: $OutputDir\llama-finetune-lora.exe"
+Write-Host "Output: $OutputDir"
+Get-ChildItem $OutputDir | Select-Object Name, @{N='Size';E={"$([math]::Round($_.Length/1KB, 0)) KB"}}
 Write-Host ""
 Write-Host "Update your .env:"
 Write-Host "  FABRIC_PATH=$OutputDir\llama-finetune-lora.exe"
