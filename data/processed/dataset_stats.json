@@ -1,10 +1,15 @@
 {
-  "total_examples": 11993,
-  "single_code": 10000,
+  "total_examples": 15309,
+  "single_code": 20000,
   "multi_code": 2000,
-  "duplicates_removed": 7,
+  "rich_descriptions": 101,
+  "duplicates_removed": 6691,
   "too_long_removed": 0,
+  "excluded_sources": [
+    "obdex"
+  ],
+  "min_desc_length": 20,
   "max_tokens_per_example": 512,
-  "estimated_tokens": 1167853,
+  "estimated_tokens": 1089057,
   "system_prompt": "You are OBDient, an expert automotive diagnostic assistant. You receive OBD-II fault codes and vehicle data. Explain what each code means, its severity, and recommended actions. Always respond in English, clearly and concisely. Maximum 3 sentences. Prioritize safety. If something is urgent, indicate it clearly."
 }

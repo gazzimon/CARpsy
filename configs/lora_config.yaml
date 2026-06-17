@@ -12,7 +12,7 @@ dataset:
   path:            "data/splits/train.jsonl"
   validation_path: "data/splits/val.jsonl"
   format:          "chat"   # system / user / assistant messages
-  max_examples:    10000    # cap for initial training run
+  max_examples:    20000    # raised — clean dataset has ~18k valid records
 
 lora:
   rank:   8     # --lora-rank  (8–16 recommended)
