@@ -107,16 +107,18 @@ def find_model_gguf() -> Path:
 
 
 def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkpoint_dir: Path) -> list[str]:
-    """Build the llama-finetune-lora command line.
-
-    This QVAC Fabric binary only accepts the flags listed in its --help output.
-    No -ngl, -c, -b, -ub, -fa, or --flash-attn — those cause backend assertion failures.
-    Backend selection and context length are managed internally by the binary.
-    """
+    """Build the llama-finetune-lora command line."""
     args = [str(binary)]
 
     args.extend(["-m", str(model)])
     args.extend(["-f", str(dataset)])
+
+    # Limit context to training length — default (0) loads model max (40960 tokens = 4.5 GB KV cache)
+    training = config.get("training", {})
+    ctx = training.get("context_length", 512)
+    args.extend(["-c", str(ctx)])
+    args.extend(["-b",  str(training.get("batch_size", 4))])
+    args.extend(["-ub", str(training.get("ubatch_size", 512))])
 
     lora = config.get("lora", {})
     args.extend(["--lora-rank",    str(lora.get("rank", 8))])
@@ -127,7 +129,6 @@ def build_command(binary: Path, model: Path, dataset: Path, config: dict, checkp
     adapter_path = OUTPUT_DIR / "carpsy-adapter.gguf"
     args.extend(["--output-adapter", str(adapter_path)])
 
-    training = config.get("training", {})
     args.extend(["--learning-rate", str(training.get("learning_rate", "2e-4"))])
     args.extend(["--weight-decay",  str(training.get("weight_decay", "1e-2"))])
     args.extend(["--num-epochs",    str(training.get("num_epochs", 3))])
