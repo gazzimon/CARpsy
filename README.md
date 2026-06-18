@@ -5,6 +5,28 @@
 
 ---
 
+## Why Fine-Tune? Empirical Justification
+
+Before committing to fine-tuning, we tested whether a base model could already answer DTC queries correctly — making training redundant.
+
+We ran `scripts/10_baseline_vs_golden.py` against 20 random examples from the test split, comparing three base models (no fine-tuning, same system prompt) against our golden answers:
+
+| Model | Keyword Overlap | DTC Recall | Length Ratio | Composite Score |
+|-------|----------------|------------|--------------|-----------------|
+| Qwen2.5 0.5B (base) | 3.9% | 100% | 15.6% | 35.1% |
+| Qwen2.5 1.5B (base) | 4.1% | 100% | 17.1% | 35.4% |
+| LLaMA 3.2 1B (base) | 5.9% | 100% | 18.9% | 36.8% |
+
+**All three models scored ~35–37% — well below the 55% threshold for acceptable quality.**
+
+The pattern was consistent across all models: every base model correctly repeated the DTC code from the user's message (100% DTC recall), but **fabricated plausible-sounding but incorrect definitions** — describing unrelated codes as "fuel pressure regulator problems", "oxygen sensor issues", or "ECM communication faults", regardless of the actual code.
+
+This is not a model size problem. Scaling from 0.5B to 1.5B parameters produced no meaningful improvement. The issue is that **small base models do not have the ~5,000+ DTC-to-definition mappings memorized with factual accuracy**. Fine-tuning injects this factual knowledge explicitly — it is not a format or style adjustment.
+
+**Conclusion: fine-tuning is necessary and not redundant.** The system prompt alone, regardless of model size in the 0.5–1.5B range, cannot produce correct DTC diagnoses.
+
+---
+
 ## What is CARpsy?
 
 CARpsy is a 5-step pipeline that:

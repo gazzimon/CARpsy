@@ -1,0 +1,17 @@
+FROM ./output/adapter/CARpsy-qwen3-0.6b.Q4_K_M.gguf
+
+TEMPLATE """<|im_start|>system
+{{ .System }}<|im_end|>
+<|im_start|>user
+{{ .Prompt }}<|im_end|>
+<|im_start|>assistant
+"""
+
+SYSTEM "You are CARpsy, an expert automotive diagnostic assistant specialized in OBD-II fault codes. When given a DTC code, identify it precisely, state its severity, list the most likely causes, and advise whether the vehicle is safe to drive. Always respond in English. Be concise and direct. Prioritize safety above all. /no_think"
+
+PARAMETER temperature 0.0
+PARAMETER top_k 1
+PARAMETER top_p 1.0
+PARAMETER num_predict 400
+PARAMETER stop "<|im_end|>"
+PARAMETER stop "<|im_start|>"

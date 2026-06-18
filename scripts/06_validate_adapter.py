@@ -40,21 +40,24 @@ _load_dotenv(REPO_ROOT / ".env")
 # Unsloth exports a MERGED model (base + LoRA fused) — not a separate adapter.
 # Use it directly as the model; no --lora flag needed.
 # Unsloth outputs a merged GGUF. Check both model names (0.6B is the current target).
-_MERGED_06B = REPO_ROOT / "output" / "adapter" / "qwen3-0.6b.Q4_K_M.gguf"
+_MERGED_06B = REPO_ROOT / "output" / "adapter" / "CARpsy-qwen3-0.6b.Q4_K_M.gguf"
+_MERGED_06B_OLD = REPO_ROOT / "output" / "adapter" / "qwen3-0.6b.Q4_K_M.gguf"
 _MERGED_17B = REPO_ROOT / "output" / "adapter" / "qwen3-1.7b.Q4_K_M.gguf"
-MERGED_MODEL_PATH = _MERGED_06B if _MERGED_06B.exists() else _MERGED_17B
+MERGED_MODEL_PATH = (
+    _MERGED_06B if _MERGED_06B.exists() else
+    _MERGED_06B_OLD if _MERGED_06B_OLD.exists() else
+    _MERGED_17B
+)
 ADAPTER_PATH = MERGED_MODEL_PATH   # kept for CLI --adapter compat
 MODEL_DIR = REPO_ROOT / "models"
 REPORT_PATH = REPO_ROOT / "output" / "adapter" / "validation_report.json"
 
 SYSTEM_PROMPT = (
-    "You are OBDient, an expert automotive diagnostic assistant. "
-    "You receive OBD-II fault codes and vehicle data. "
-    "Explain what each code means, its severity, and recommended actions. "
-    "Always respond in English, clearly and concisely. "
-    "Maximum 3 sentences. Prioritize safety. "
-    "If something is urgent, indicate it clearly. "
-    "/no_think"  # Qwen3: disable internal chain-of-thought
+    "You are CARpsy, an expert automotive diagnostic assistant specialized in OBD-II fault codes. "
+    "When given a DTC code, identify it precisely, state its severity, list the most likely causes, "
+    "and advise whether the vehicle is safe to drive. "
+    "Always respond in English. Be concise and direct. Prioritize safety above all. "
+    "/no_think"
 )
 
 # Prompts de prueba con respuesta esperada mínima
@@ -125,6 +128,7 @@ def find_llama_cli() -> Path:
         ]
 
     candidates += [
+        Path("C:/Users/User/Documents/llama-b9704-bin/llama-cli.exe"),
         Path("C:/Users/User/Documents/llama-b7349-bin/llama-cli.exe"),
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/Release/llama-cli.exe"),
         Path("C:/Users/User/Documents/qvac-fabric-llm.cpp/build/bin/llama-cli.exe"),
@@ -161,6 +165,32 @@ def find_model() -> Path:
     return gguf_files[0]
 
 
+def run_inference_ollama(prompt: str, model_name: str = "carpsy") -> str:
+    """Ejecuta inferencia via Ollama API (chat template correcto para Qwen3)."""
+    import urllib.request, json as _json
+    payload = _json.dumps({
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user",   "content": prompt},
+        ],
+        "stream": False,
+        "options": {"temperature": 0.0, "top_k": 1, "top_p": 1.0, "num_predict": 400}
+    }).encode()
+    req = urllib.request.Request(
+        "http://localhost:11434/api/chat",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            data = _json.loads(resp.read())
+            return data["message"]["content"].strip()
+    except Exception as e:
+        return f"[ERROR: {e}]"
+
+
 def run_inference(cli: Path, model: Path, adapter: Path, prompt: str, n_predict: int = 150) -> str:
     """Ejecuta inferencia con llama-cli y devuelve la respuesta generada.
 
@@ -183,8 +213,9 @@ def run_inference(cli: Path, model: Path, adapter: Path, prompt: str, n_predict:
             "-m", str(adapter),
             "-ngl", "999",
             "-n", str(n_predict),
-            "--temp", "0.1",
-            "--top-p", "0.9",
+            "--temp", "0.0",        # greedy — máxima consistencia
+            "--top-p", "1.0",
+            "--top-k", "1",
             "-p", full_prompt,
             "--no-display-prompt",
             "-s", "42",
@@ -197,8 +228,9 @@ def run_inference(cli: Path, model: Path, adapter: Path, prompt: str, n_predict:
             "--lora", str(adapter),
             "-ngl", "999",
             "-n", str(n_predict),
-            "--temp", "0.1",
-            "--top-p", "0.9",
+            "--temp", "0.0",
+            "--top-p", "1.0",
+            "--top-k", "1",
             "-p", full_prompt,
             "--no-display-prompt",
             "-s", "42",
@@ -258,13 +290,14 @@ def evaluate_response(response: str, case: dict) -> dict:
 
 def print_case_result(case: dict, result: dict, i: int) -> None:
     status = "PASS" if result["passed"] else "FAIL"
-    print(f"\n   Case #{i}: {status} ")
+    preview = result['response_preview'].encode('ascii', errors='replace').decode('ascii')
+    print(f"\n  Case #{i}: [{status}]")
     print(f"  Prompt:   {case['prompt']}")
-    print(f"  Response: {result['response_preview']}{'...' if len(result['response_preview']) == 200 else ''}")
-    print(f"  Code found:    {'' if result['code_found'] else ''} ({case['expected_code']})")
-    print(f"  Keywords:      {result['keyword_hit_rate']:.0%} ({', '.join(result['keywords_found'])})")
-    print(f"  Severity OK:   {'' if result['severity_ok'] else ''}")
-    print(f"  Concise:       {'' if result['concise'] else ''} ({result['response_length']} words)")
+    print(f"  Response: {preview}{'...' if len(result['response_preview']) == 200 else ''}")
+    print(f"  Code found:  {'OK' if result['code_found'] else 'FAIL'} ({case['expected_code']})")
+    print(f"  Keywords:    {result['keyword_hit_rate']:.0%} ({', '.join(result['keywords_found'])})")
+    print(f"  Severity OK: {'OK' if result['severity_ok'] else 'FAIL'}")
+    print(f"  Concise:     {'OK' if result['concise'] else 'FAIL'} ({result['response_length']} words)")
 
 
 def main():
@@ -323,7 +356,7 @@ def main():
     all_results = []
     for i, case in enumerate(VALIDATION_CASES, 1):
         print(f"\n  [{i}/{len(VALIDATION_CASES)}] {case['prompt'][:60]}...")
-        response = run_inference(cli, model, adapter, case["prompt"], n_predict=300)
+        response = run_inference_ollama(case["prompt"])
         result = evaluate_response(response, case)
         result["prompt"] = case["prompt"]
         all_results.append(result)
