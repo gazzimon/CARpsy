@@ -53,7 +53,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive short distances, but a clogged catalyst can destroy the engine.",
-        "cost": "$400–$2,400 (catalytic converter replacement)",
+        "parts": ["catalytic converter", "downstream O2 sensor"],
         "fix": "Diagnose O2 sensor readings first; replace catalytic converter if confirmed faulty.",
     },
     "P0430": {
@@ -62,7 +62,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Vehicle runs, but increased emissions and potential engine damage if converter is blocked.",
-        "cost": "$400–$2,400 (catalytic converter + O2 sensor)",
+        "parts": ["catalytic converter (Bank 2)", "O2 sensor (Bank 2)"],
         "fix": "Test O2 sensor output and inspect exhaust for leaks before replacing the catalytic converter.",
     },
     "P0300": {
@@ -71,7 +71,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — severe misfires can damage the catalytic converter in minutes and cause engine fire.",
-        "cost": "$66–$1,900 depending on root cause (spark plugs vs. head gasket)",
+        "parts": ["spark plugs (all cylinders)", "ignition coils", "fuel injectors"],
         "fix": "Check spark plugs and ignition coils first. A flashing check engine light means stop driving immediately.",
     },
     "P0301": {
@@ -80,7 +80,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — continued misfiring damages the catalytic converter and can cause engine failure.",
-        "cost": "$66–$1,900 depending on root cause",
+        "parts": ["spark plug (cylinder 1)", "ignition coil (cylinder 1)", "fuel injector (cylinder 1)"],
         "fix": "Swap the cylinder 1 spark plug and ignition coil with a known-good cylinder to isolate the fault.",
     },
     "P0302": {
@@ -89,7 +89,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — continued misfiring can destroy the catalytic converter.",
-        "cost": "$66–$1,900 depending on root cause",
+        "parts": ["spark plug (cylinder 2)", "ignition coil (cylinder 2)", "fuel injector (cylinder 2)"],
         "fix": "Swap cylinder 2 spark plug and coil with a known-good cylinder to isolate the fault.",
     },
     "P0303": {
@@ -98,7 +98,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Stop driving — misfires overheat and damage the catalytic converter.",
-        "cost": "$66–$1,900 depending on root cause",
+        "parts": ["spark plug (cylinder 3)", "ignition coil (cylinder 3)", "fuel injector (cylinder 3)"],
         "fix": "Replace the cylinder 3 spark plug as a first step; swap ignition coil to verify.",
     },
     "P0171": {
@@ -107,7 +107,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Short drives to the shop are okay; prolonged lean conditions cause engine wear and catalytic converter damage.",
-        "cost": "$20–$330 (vacuum hose $10–$50; O2 sensor $200–$300; MAF sensor $50–$150)",
+        "parts": ["MAF sensor", "PCV valve", "vacuum hoses", "upstream O2 sensor", "fuel filter"],
         "fix": "Inspect all vacuum hoses for cracks, clean the MAF sensor, and test fuel pressure.",
     },
     "P0174": {
@@ -116,7 +116,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Not recommended — prolonged lean condition causes misfires, overheating, and catalytic converter damage.",
-        "cost": "$20–$330 (same components as P0171)",
+        "parts": ["intake manifold gasket", "MAF sensor", "O2 sensor (Bank 2)", "fuel filter"],
         "fix": "Check for vacuum leaks using smoke testing; clean or replace MAF sensor; verify fuel delivery.",
     },
     "P0128": {
@@ -125,8 +125,8 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive short distances; chronic cold running causes sludge buildup and increased engine wear.",
-        "cost": "$40–$190 (thermostat is the most common and cheapest fix: $20–$50 part)",
-        "fix": "Replace the thermostat first — it's cheap and resolves 80% of P0128 cases.",
+        "parts": ["thermostat", "coolant temperature sensor (ECT)"],
+        "fix": "Replace the thermostat first — it resolves the majority of P0128 cases.",
     },
     "P0562": {
         "definition": "System Voltage Low — PCM detected battery/system voltage below the calibrated threshold",
@@ -134,7 +134,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — the engine can stall without warning, and electrical systems may fail unpredictably.",
-        "cost": "Battery replacement: $100–$250. Alternator replacement: $300–$700.",
+        "parts": ["battery", "alternator", "voltage regulator", "battery cables"],
         "fix": "Test battery voltage (should be 12.6V+ off, 13.5–14.5V running); test alternator output.",
     },
     "P0455": {
@@ -143,7 +143,7 @@ DTC_KNOWLEDGE = {
         "severity": "info",
         "safe_to_drive": True,
         "safe_note": "Safe to drive, but excess fuel vapors escape into the atmosphere; may fail emissions test.",
-        "cost": "$0–$25 if gas cap (tighten or replace). Up to $400+ for EVAP components.",
+        "parts": ["gas cap", "EVAP purge valve", "EVAP vent valve", "charcoal canister", "EVAP hoses"],
         "fix": "First, tighten or replace the gas cap and clear the code. If it returns, smoke-test the EVAP system.",
     },
     "P0449": {
@@ -152,7 +152,7 @@ DTC_KNOWLEDGE = {
         "severity": "info",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; no performance impact, but will fail emissions testing.",
-        "cost": "$5–$25 (gas cap) up to $550 (carbon canister replacement)",
+        "parts": ["EVAP vent valve solenoid", "gas cap", "carbon canister", "EVAP hoses"],
         "fix": "Check the gas cap first. If the code persists, test the vent valve solenoid with a multimeter.",
     },
     "P0101": {
@@ -161,7 +161,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Reduced power and hesitation make this a driving hazard; schedule repair promptly.",
-        "cost": "$50–$1,780 (cleaning the sensor: $0; replacing MAF sensor: $100–$400)",
+        "parts": ["MAF sensor", "air filter", "throttle position sensor"],
         "fix": "Clean the MAF sensor with MAF-specific spray cleaner as a first step; replace if cleaning fails.",
     },
     "P0113": {
@@ -170,7 +170,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive short distances; incorrect air temperature readings affect fuel economy and performance.",
-        "cost": "$50–$150 (IAT sensor replacement)",
+        "parts": ["IAT sensor", "IAT sensor wiring harness"],
         "fix": "Inspect IAT sensor wiring for damage; replace the sensor if voltage reads above 4.9V at key-on.",
     },
     "P0118": {
@@ -179,7 +179,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Do not drive — a faulty coolant sensor can mask real overheating and cause engine damage.",
-        "cost": "$50–$200 (ECT sensor replacement)",
+        "parts": ["ECT sensor", "ECT sensor wiring harness"],
         "fix": "Check coolant level first; inspect sensor wiring for open circuits; replace the ECT sensor.",
     },
     "P0335": {
@@ -188,7 +188,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — the engine may stall without warning and will not restart.",
-        "cost": "$150–$400 (crankshaft position sensor replacement)",
+        "parts": ["crankshaft position sensor", "reluctor wheel"],
         "fix": "Replace the crankshaft position sensor; inspect the reluctor wheel for missing teeth.",
     },
     "P0340": {
@@ -197,7 +197,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — engine may stall and will have difficulty restarting.",
-        "cost": "$100–$300 (sensor replacement); higher if timing chain is the cause",
+        "parts": ["camshaft position sensor", "timing chain kit"],
         "fix": "Replace the camshaft position sensor; verify timing marks align correctly.",
     },
     "P0700": {
@@ -206,7 +206,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Not recommended — P0700 is a gateway code; the real fault may cause sudden loss of drive.",
-        "cost": "Varies widely by underlying cause; transmission fluid service: $100–$250",
+        "parts": ["transmission fluid", "transmission solenoid pack", "TCM"],
         "fix": "Scan for additional P07xx or P08xx codes stored alongside P0700 — those reveal the actual fault.",
     },
     "P0741": {
@@ -215,7 +215,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Avoid highway driving — TCC failure increases transmission heat and can cause complete transmission failure.",
-        "cost": "$150–$500 (solenoid); up to $2,500+ (torque converter replacement)",
+        "parts": ["TCC solenoid", "torque converter", "transmission fluid", "valve body"],
         "fix": "Check transmission fluid level and condition first; test TCC solenoid resistance.",
     },
     "P0325": {
@@ -224,7 +224,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe short distances, but the ECM will retard ignition timing causing performance and fuel economy loss.",
-        "cost": "$150–$500 (knock sensor replacement + labor, often requires intake manifold removal)",
+        "parts": ["knock sensor", "knock sensor wiring harness"],
         "fix": "Check sensor mounting torque and connector; replace knock sensor if wiring checks out.",
     },
     "P0016": {
@@ -233,7 +233,7 @@ DTC_KNOWLEDGE = {
         "severity": "critical",
         "safe_to_drive": False,
         "safe_note": "Do not drive — a jumped timing chain can cause catastrophic engine damage (bent valves).",
-        "cost": "$500–$1,500+ (timing chain kit replacement)",
+        "parts": ["timing chain kit", "timing chain tensioner", "timing chain guides", "VVT actuator"],
         "fix": "Check oil level and condition immediately; do not start the engine until timing is verified.",
     },
     "P0011": {
@@ -242,7 +242,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Not recommended — can progress to timing chain damage and engine failure.",
-        "cost": "$100–$400 (VVT solenoid); $500–$1,500 if timing chain is involved",
+        "parts": ["engine oil + filter", "VVT solenoid (Bank 1)", "camshaft actuator"],
         "fix": "Change the engine oil and filter first — dirty oil is the #1 cause of P0011.",
     },
     "P0021": {
@@ -251,7 +251,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": False,
         "safe_note": "Not recommended — timing chain damage can follow quickly.",
-        "cost": "$100–$400 (VVT solenoid); higher if timing hardware is damaged",
+        "parts": ["engine oil + filter", "VVT solenoid (Bank 2)", "camshaft actuator (Bank 2)"],
         "fix": "Change engine oil and filter immediately; inspect the Bank 2 VVT solenoid.",
     },
     "P0442": {
@@ -260,7 +260,7 @@ DTC_KNOWLEDGE = {
         "severity": "info",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; will fail emissions test. Start with the gas cap.",
-        "cost": "$0–$25 (gas cap) up to $200 (EVAP hose or valve)",
+        "parts": ["gas cap", "EVAP hoses", "purge valve"],
         "fix": "Tighten or replace the gas cap, clear the code, and drive two complete drive cycles.",
     },
     "P0141": {
@@ -269,7 +269,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; but fuel economy suffers and catalytic converter health cannot be monitored.",
-        "cost": "$150–$300 (downstream O2 sensor replacement)",
+        "parts": ["downstream O2 sensor (Bank 1, Sensor 2)", "O2 sensor heater fuse"],
         "fix": "Check the O2 sensor heater fuse first; replace the sensor if fuse and wiring are intact.",
     },
     "P0131": {
@@ -278,7 +278,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe short distances; a faulty upstream O2 sensor causes poor fuel economy and may damage the catalytic converter.",
-        "cost": "$150–$350 (upstream O2 sensor replacement)",
+        "parts": ["upstream O2 sensor (Bank 1, Sensor 1)"],
         "fix": "Check for exhaust leaks near the sensor first; replace the upstream O2 sensor if no leaks found.",
     },
     "P0507": {
@@ -287,7 +287,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; but high idle wastes fuel and puts stress on the drivetrain.",
-        "cost": "$50–$300 (IAC valve or throttle body cleaning)",
+        "parts": ["IAC valve", "throttle body", "throttle position sensor"],
         "fix": "Clean the throttle body with throttle body cleaner; check for vacuum leaks around the intake.",
     },
     "P0505": {
@@ -296,7 +296,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; engine may stall at stops in severe cases.",
-        "cost": "$80–$400 (IAC valve replacement)",
+        "parts": ["IAC valve", "throttle body"],
         "fix": "Clean the throttle body and IAC valve passages; replace IAC valve if cleaning fails.",
     },
     "P0401": {
@@ -305,7 +305,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive short distances; NOx emissions increase and engine may knock under load.",
-        "cost": "$150–$700 (EGR valve cleaning or replacement)",
+        "parts": ["EGR valve", "EGR solenoid", "EGR vacuum line"],
         "fix": "Remove and clean the EGR valve with carbon cleaner; replace if passages are permanently blocked.",
     },
     "P0404": {
@@ -314,7 +314,7 @@ DTC_KNOWLEDGE = {
         "severity": "warning",
         "safe_to_drive": True,
         "safe_note": "Safe to drive; increased NOx emissions and possible rough idle.",
-        "cost": "$150–$500 (EGR valve replacement)",
+        "parts": ["EGR valve", "EGR position sensor"],
         "fix": "Inspect and clean the EGR valve; test the EGR position sensor voltage.",
     },
 }
@@ -339,11 +339,11 @@ SINGLE_CODE_TEMPLATES = [
     "Mechanic said I have {code}. What should I know before I go in?",
 ]
 
-COST_TEMPLATES = [
-    "I have {code} on my {make} {model}. How much will it cost to fix?",
-    "Code {code} came up. What's the typical repair cost?",
-    "Got {code} on my car. Is this an expensive repair?",
-    "My {make} has {code}. Should I expect a big repair bill?",
+PARTS_TEMPLATES = [
+    "I have {code} on my {make} {model}. What parts will my mechanic need?",
+    "Code {code} came up. What components are likely to be replaced?",
+    "Got {code} on my car. What should the mechanic inspect and quote?",
+    "My {make} has {code}. What parts should I ask about when getting a quote?",
 ]
 
 DRIVE_TEMPLATES = [
@@ -381,15 +381,14 @@ VEHICLES = [
 
 # ─── Generadores de respuesta ──────────────────────────────────────────────────
 
-def build_diagnostic_response(code: str, info: dict, include_cost: bool = False) -> str:
+def build_diagnostic_response(code: str, info: dict) -> str:
     """Construye una respuesta diagnóstica completa y verificada."""
-    severity  = info["severity"]
-    safe      = info["safe_to_drive"]
+    severity   = info["severity"]
+    safe       = info["safe_to_drive"]
     definition = info["definition"]
-    causes    = info["causes"]
-    safe_note = info["safe_note"]
+    causes     = info["causes"]
+    safe_note  = info["safe_note"]
 
-    # Seleccionar 2 causas al azar para variedad
     top_causes = random.sample(causes, min(2, len(causes)))
     causes_str = " or ".join(top_causes)
 
@@ -404,20 +403,19 @@ def build_diagnostic_response(code: str, info: dict, include_cost: bool = False)
         prefix = f"{code}: {definition}."
         action = f"Monitor for symptoms; common causes include {causes_str}. Safe to drive, but address at next service."
 
-    if include_cost:
-        action += f" Estimated repair cost: {info['cost']}."
-
     return f"{prefix} {action}"
 
 
-def build_cost_response(code: str, info: dict) -> str:
+def build_parts_response(code: str, info: dict) -> str:
+    """Respuesta orientada al mecánico: qué piezas inspeccionar y cotizar."""
     definition = info["definition"]
-    cost = info["cost"]
+    parts = info["parts"]
     fix = info["fix"]
+    parts_str = ", ".join(parts[:3])
     return (
         f"{code}: {definition}. "
-        f"Typical repair cost: {cost}. "
-        f"Recommended first step: {fix}"
+        f"Parts to inspect and quote: {parts_str}. "
+        f"Recommended diagnostic first step: {fix}"
     )
 
 
@@ -463,13 +461,13 @@ def generate_examples_for_code(code: str, info: dict, n_variants: int = 8) -> li
             # Diagnóstico general
             template = random.choice(SINGLE_CODE_TEMPLATES)
             user_msg = template.format(code=code, make=make, model=model, year=year)
-            assistant_msg = build_diagnostic_response(code, info, include_cost=(i % 3 == 0))
+            assistant_msg = build_diagnostic_response(code, info)
 
         elif bucket == 1:
-            # Costo
-            template = random.choice(COST_TEMPLATES)
+            # Piezas para presupuesto del mecánico
+            template = random.choice(PARTS_TEMPLATES)
             user_msg = template.format(code=code, make=make, model=model, year=year)
-            assistant_msg = build_cost_response(code, info)
+            assistant_msg = build_parts_response(code, info)
 
         elif bucket == 2:
             # Seguridad de conducir
