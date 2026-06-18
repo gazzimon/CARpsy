@@ -119,14 +119,20 @@ python scripts/02_prepare_dataset.py
 # Step 3 — Split 80 / 10 / 10 (train / val / test)
 python scripts/03_split_dataset.py
 
-# Step 4 — Run LoRA fine-tuning locally
+# Step 4a — Run LoRA fine-tuning locally (QVAC Fabric, requires compiled binary)
 python scripts/04_run_finetune.py
+# Step 4b — OR run on Google Colab with Unsloth (recommended, free T4 GPU)
+#           Open colab_finetune.ipynb in Google Colab
 
 # Step 5 — Structural evaluation of the dataset
 python scripts/05_evaluate_adapter.py
 
-# Step 6 — Live inference validation of the adapter
+# Step 6 — Live inference validation of the fine-tuned model
 python scripts/06_validate_adapter.py
+# (auto-detects Unsloth merged model vs QVAC Fabric LoRA adapter)
+
+# Step 7 — Collaborative P2P demo (hackathon)
+python scripts/07_run_collaborative_demo.py --demo
 ```
 
 ---
@@ -170,15 +176,43 @@ The `--assistant-loss-only` flag ensures the model learns only from assistant to
 
 ---
 
+## Fine-Tuning — Two Paths
+
+### Path A — QVAC Fabric (local, llama.cpp fork)
+Produces a **small LoRA delta** (~2–10 MB) loaded on top of the base model:
+```bash
+python scripts/04_run_finetune.py
+# output: output/adapter/carpsy-adapter.gguf  (delta only)
+```
+
+### Path B — Unsloth on Google Colab (T4 GPU) ✅ Used
+Produces a **merged full model** (base + LoRA fused, ~1.1 GB Q4_K_M):
+```
+Google Colab → colab_finetune.ipynb → Google Drive → output/adapter/qwen3-1.7b.Q4_K_M.gguf
+```
+
+| | QVAC Fabric | Unsloth/Colab |
+|--|-------------|---------------|
+| Output | small adapter (~MB) | merged model (~1.1 GB) |
+| Usage | `-m base.gguf --lora adapter.gguf` | `-m qwen3-1.7b.Q4_K_M.gguf` |
+| `adapterSrc` in SDK | `file://carpsy-adapter.gguf` | not needed |
+| `modelSrc` in SDK | predefined constant | `file://qwen3-1.7b.Q4_K_M.gguf` |
+
 ## Integration with OBDient
 
-Once `carpsy-adapter.gguf` is generated and validated, integrate it in the OBDient QVAC datasource:
-
+### With Unsloth merged model (current)
 ```typescript
 // qvac-sdk.datasource.ts
 const modelId = await loadModel({
-  modelSrc:    QWEN3_1_7B_Q4_K_M,
-  adapterSrc: 'file://carpsy-adapter.gguf',
+  modelSrc: 'file://output/adapter/qwen3-1.7b.Q4_K_M.gguf',
+});
+```
+
+### With QVAC Fabric LoRA adapter (future)
+```typescript
+const modelId = await loadModel({
+  modelSrc:   QWEN3_1_7B_Q4_K_M,
+  adapterSrc: 'file://output/adapter/carpsy-adapter.gguf',
 });
 ```
 
@@ -210,6 +244,70 @@ CARpsy/
 ├── requirements.txt
 └── README.md
 ```
+
+---
+
+## Collaborative P2P Network with QVAC
+
+CARpsy can operate as a **specialized node** in a QVAC agent swarm, where multiple experts collaborate to answer complex queries.
+
+### Architecture
+
+```
+USER QUERY: "P0420 + repair + cost"
+       ↓
+[ORCHESTRATOR]
+ ↙       ↓       ↘
+[DTC]  [PARTS]  [REPAIR]   ← parallel agents, same LoRA adapter
+ ↘       ↓       ↙
+ COMBINED RESPONSE
+
+100% local · no API keys · no data leaves the device
+```
+
+### Agent Specializations
+
+| Agent | Role | System Prompt Focus |
+|-------|------|-------------------|
+| `CARpsy-DTC` | OBD-II code diagnosis | Fault meaning + severity |
+| `CARpsy-Parts` | Parts & cost estimation | Replacement parts + price range |
+| `CARpsy-Repair` | Repair procedure | Step-by-step diagnosis |
+
+### Run the Collaborative Demo
+
+```bash
+# Full hackathon demo (guided, 3 steps)
+python scripts/07_run_collaborative_demo.py --demo
+
+# Single composite query
+python scripts/07_run_collaborative_demo.py --query "P0420 Toyota Camry 2019"
+
+# Check configuration without running inference
+python scripts/07_run_collaborative_demo.py --dry-run
+```
+
+### Demo Script (10-minute hackathon flow)
+
+| Step | Title | Query |
+|------|-------|-------|
+| 1 | Simple Diagnosis | `P0420 Toyota Camry 2019` |
+| 2 | Compound Query with Cost | `P0300 Ford F-150 — repair + cost` |
+| 3 | Critical Fault Urgency | `P0562 low battery — safe to drive?` |
+
+### Integration with OBDient (QVAC SDK)
+
+```typescript
+// In your OBDient datasource — after adapter is validated
+import { loadModel } from '@tether/qvac-sdk';
+
+const modelId = await loadModel({
+  modelSrc:   QWEN3_1_7B_Q4_K_M,
+  adapterSrc: 'file://output/adapter/carpsy-adapter.gguf',
+});
+```
+
+> The QVAC SDK is embedded in the [OBDient](https://github.com/tetherto/obdient) project.
+> Clone OBDient and reference `carpsy-adapter.gguf` from its datasource configuration.
 
 ---
 

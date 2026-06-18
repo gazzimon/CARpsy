@@ -37,8 +37,9 @@ CONFIG_PATH   = REPO_ROOT / "configs" / "lora_config.yaml"
 # Sources excluded from training — data quality issues documented above
 EXCLUDED_SOURCES = {"obdex"}
 
-# Minimum description length to be considered useful
-MIN_DESC_LENGTH = 20
+# Minimum description length to be considered useful.
+# Was 20 — too aggressive, filtered 781 valid short codes like "System Voltage Low" (18 chars).
+MIN_DESC_LENGTH = 10
 
 # A description is "rich" (contains inline causes) when it has 3+ comma/semicolon
 # separated clauses and is long enough to be a real causes list
