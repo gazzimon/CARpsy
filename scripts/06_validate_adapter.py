@@ -39,7 +39,10 @@ _load_dotenv(REPO_ROOT / ".env")
 
 # Unsloth exports a MERGED model (base + LoRA fused) — not a separate adapter.
 # Use it directly as the model; no --lora flag needed.
-MERGED_MODEL_PATH = REPO_ROOT / "output" / "adapter" / "qwen3-1.7b.Q4_K_M.gguf"
+# Unsloth outputs a merged GGUF. Check both model names (0.6B is the current target).
+_MERGED_06B = REPO_ROOT / "output" / "adapter" / "qwen3-0.6b.Q4_K_M.gguf"
+_MERGED_17B = REPO_ROOT / "output" / "adapter" / "qwen3-1.7b.Q4_K_M.gguf"
+MERGED_MODEL_PATH = _MERGED_06B if _MERGED_06B.exists() else _MERGED_17B
 ADAPTER_PATH = MERGED_MODEL_PATH   # kept for CLI --adapter compat
 MODEL_DIR = REPO_ROOT / "models"
 REPORT_PATH = REPO_ROOT / "output" / "adapter" / "validation_report.json"
