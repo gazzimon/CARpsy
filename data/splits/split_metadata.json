@@ -1,10 +1,10 @@
 {
   "dataset_source": "C:\\Users\\User\\Documents\\CARpsy\\data\\processed\\obdient_chat_dataset.jsonl",
-  "total_examples": 15197,
+  "total_examples": 15494,
   "splits": {
-    "train": 12157,
-    "val": 1519,
-    "test": 1521
+    "train": 12395,
+    "val": 1549,
+    "test": 1550
   },
   "ratios": {
     "train": 0.8,
