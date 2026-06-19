@@ -40,11 +40,13 @@ _load_dotenv(REPO_ROOT / ".env")
 # Unsloth exports a MERGED model (base + LoRA fused) — not a separate adapter.
 # Use it directly as the model; no --lora flag needed.
 # Unsloth outputs a merged GGUF. Check both model names (0.6B is the current target).
-_MERGED_06B = REPO_ROOT / "output" / "adapter" / "CARpsy-qwen3-0.6b.Q4_K_M.gguf"
+_MERGED_06B = REPO_ROOT / "output" / "adapter" / "CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf"
+_MERGED_06B_V1 = REPO_ROOT / "output" / "adapter" / "CARpsy-qwen3-0.6b.Q4_K_M.gguf"
 _MERGED_06B_OLD = REPO_ROOT / "output" / "adapter" / "qwen3-0.6b.Q4_K_M.gguf"
 _MERGED_17B = REPO_ROOT / "output" / "adapter" / "qwen3-1.7b.Q4_K_M.gguf"
 MERGED_MODEL_PATH = (
-    _MERGED_06B if _MERGED_06B.exists() else
+    _MERGED_06B     if _MERGED_06B.exists()     else
+    _MERGED_06B_V1  if _MERGED_06B_V1.exists()  else
     _MERGED_06B_OLD if _MERGED_06B_OLD.exists() else
     _MERGED_17B
 )

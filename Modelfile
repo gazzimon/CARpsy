@@ -1,4 +1,4 @@
-FROM ./output/adapter/CARpsy-qwen3-0.6b.Q4_K_M.gguf
+FROM ./output/adapter/CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf
 
 TEMPLATE """<|im_start|>system
 {{ .System }}<|im_end|>
