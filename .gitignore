@@ -34,11 +34,13 @@ data/processed/*.parquet
 models/*.gguf
 !models/.gitkeep
 
-# Output
+# Output — los GGUF/optimizer son enormes, pero los reportes JSON son evidencia y se versionan
 output/adapter/*
 !output/adapter/.gitkeep
+!output/adapter/*.json
 output/checkpoints/*
 !output/checkpoints/.gitkeep
+!output/checkpoints/**/metadata.txt
 
 # IDE
 .vscode/

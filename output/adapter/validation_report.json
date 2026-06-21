@@ -1,0 +1,124 @@
+{
+  "total_cases": 8,
+  "passed": 7,
+  "pass_rate": 0.88,
+  "avg_keyword_hit_rate": 0.56,
+  "adapter": "C:\\Users\\User\\Documents\\CARpsy\\output\\adapter\\CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf",
+  "model": "C:\\Users\\User\\Documents\\CARpsy\\output\\adapter\\CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf",
+  "cases": [
+    {
+      "passed": false,
+      "code_found": true,
+      "keyword_hit_rate": 0.25,
+      "keywords_found": [
+        "severity"
+      ],
+      "severity_ok": true,
+      "concise": true,
+      "response_length": 41,
+      "response_preview": "P0420: Ecemanual Speed Sensor Circuit Malfunction — read the engine's speed at the sensor. Severity 3/3 — Likely causes: faulty speed sensor, damaged wiring. Do not drive — replace the sensor right aw",
+      "prompt": "I have code P0420 on my Toyota Camry. What does it mean?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.5,
+      "keywords_found": [
+        "severity",
+        "do not drive"
+      ],
+      "severity_ok": false,
+      "concise": false,
+      "response_length": 67,
+      "response_preview": "P0300: Engine Oil Pressure Too Low — Severity 3/3 — Likely causes: Weak engine oil pressure sensor, defective oil pressure sensor, low engine oil level. Do not drive; repair the sensor first before th",
+      "prompt": "My car shows P0300. Is it serious?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.75,
+      "keywords_found": [
+        "maf",
+        "severity",
+        "causes"
+      ],
+      "severity_ok": true,
+      "concise": true,
+      "response_length": 40,
+      "response_preview": "P0171: MAF Sensor Circuit Malfunction — MAF is the mass air flow sensor. Severity 2; likely causes: faulty MAF sensor, loose MAF wiring nut. Do not drive until repaired. Likely to repeat; do not drive",
+      "prompt": "What does code P0171 mean?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.5,
+      "keywords_found": [
+        "severity",
+        "causes"
+      ],
+      "severity_ok": true,
+      "concise": true,
+      "response_length": 59,
+      "response_preview": "P0128: Engine Oil Pressure Too Low — Severity 3/3 — Likely causes include low engine oil level and poor quality oil. Drive safe immediately but do not drive soon after diagnosis; replace the engine oi",
+      "prompt": "Code P0128 appeared. Should I worry?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.5,
+      "keywords_found": [
+        "severity",
+        "do not drive"
+      ],
+      "severity_ok": false,
+      "concise": true,
+      "response_length": 38,
+      "response_preview": "P0562: MAF Sensor Circuit Malfunction (Secondary) — MAF readings are outside valid range. Severity 3/3 — Likely causes: faulty MAF sensor, noise-covered MAF sensor, and isolated MAF sensor. Do not dri",
+      "prompt": "I have P0562 on my Ford F-150."
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.5,
+      "keywords_found": [
+        "severity",
+        "do not drive"
+      ],
+      "severity_ok": false,
+      "concise": true,
+      "response_length": 40,
+      "response_preview": "P0087: Crankshaft/Spring Block Alignment (Bank 1) Severity 2 — Likely causes include worn crankshaft, faulty spark block, and out of tolerance spring block ratio. Do not drive; repair the damaged comp",
+      "prompt": "Code P0087 on my Chevrolet Silverado. What does it mean?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 1.0,
+      "keywords_found": [
+        "evap",
+        "leak",
+        "severity",
+        "gas cap"
+      ],
+      "severity_ok": true,
+      "concise": true,
+      "response_length": 35,
+      "response_preview": "P0455: EVAP System Large Leak Detected — exhaust vapors exceed specification. Severity 3/3 — Likely causes: faulty EVAP valve, loose gas cap, cracked EVAP sensor. Safe to drive short distances; avoid ",
+      "prompt": "What is P0455?"
+    },
+    {
+      "passed": true,
+      "code_found": true,
+      "keyword_hit_rate": 0.5,
+      "keywords_found": [
+        "severity",
+        "do not drive"
+      ],
+      "severity_ok": true,
+      "concise": true,
+      "response_length": 47,
+      "response_preview": "P0302: MAF Sensor Circuit Malfunction (Secondary) — severity 3/3 — likely causes: MAF sensor wire break, MAF sensor fault — do not drive; check wire break first before fault code — safe to drive with ",
+      "prompt": "My Honda Civic shows P0302. Is it safe to drive?"
+    }
+  ]
+}

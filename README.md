@@ -5,6 +5,20 @@
 
 ---
 
+## 📊 Proof of Fine-Tuning (Evidence)
+
+This model was genuinely fine-tuned — here is the verifiable proof:
+
+- **Training loss curve** — drops from ~4.1 to ~0.05 by step ~250: [`docs/evidence/Finetune curve.png`](docs/evidence/Finetune%20curve.png)
+- **Executed Colab notebook** (with per-step training logs): [`docs/evidence/colab_finetune.ipynb`](docs/evidence/colab_finetune.ipynb)
+- **Evaluation report** (1,532 test examples): [`output/adapter/evaluation_report.json`](output/adapter/evaluation_report.json)
+- **Validation report** (8 cases, 0.88 pass rate, real model responses): [`output/adapter/validation_report.json`](output/adapter/validation_report.json)
+- **Trained model weights (GGUF) on Hugging Face Hub:** https://huggingface.co/gazzimon/CARpsy-v2-qwen3-0.6b-GGUF
+
+Comparing the published weights against the base Qwen3-0.6B confirms they differ — objective evidence of fine-tuning. See [`docs/evidence/`](docs/evidence/) for details.
+
+---
+
 ## Why Fine-Tune? Empirical Justification
 
 Before committing to fine-tuning, we tested whether a base model could already answer DTC queries correctly — making training redundant.
@@ -41,20 +55,22 @@ The generated `.gguf` LoRA adapter can be loaded directly by OBDient's QVAC SDK 
 
 ---
 
-## Recommended Model — Qwen3-1.7B
+## Recommended Model — Qwen3-0.6B (current)
 
 The QVAC Fabric hackathon prioritises **Qwen3 and Gemma3** architectures, as these have verified LoRA fine-tuning support in `qvac-fabric-llm.cpp`.
 
+**CARpsy-v2 was trained on Qwen3-0.6B Q4_K_M** — this is the production model. Despite being the smallest variant, it achieved the best results in our experiments and fits comfortably on mobile hardware.
+
 | Model | Size on disk | VRAM (training) | Notes |
 |-------|-------------|-----------------|-------|
-| **Qwen3-1.7B Q4_K_M** ✅ | ~1.1 GB | ~4–6 GB | **Recommended** — QVAC-native, mobile-friendly, multilingual |
-| Qwen3-0.6B Q4_K_M | ~0.4 GB | ~2–3 GB | Fastest; lower quality |
+| **Qwen3-0.6B Q4_K_M** ✅ | ~0.4 GB | ~2–3 GB | **Current** — used for CARpsy-v2, mobile-friendly |
+| Qwen3-1.7B Q4_K_M | ~1.1 GB | ~4–6 GB | Planned for CARpsy-v3 — see Next Steps |
 | Qwen3-4B Q4_K_M | ~2.5 GB | ~8–10 GB | Best quality; needs 10 GB+ VRAM |
 | LLaMA 3.2 1B Q4_K_M | ~0.7 GB | ~4–5 GB | Works but not a QVAC-native arch |
 
-**Download Qwen3-1.7B-Q4_K_M:**
+**Download Qwen3-0.6B-Q4_K_M:**
 ```
-https://huggingface.co/Qwen/Qwen3-1.7B-GGUF
+https://huggingface.co/Qwen/Qwen3-0.6B-GGUF
 ```
 Place the `.gguf` file in `models/`.
 
@@ -159,7 +175,40 @@ python scripts/07_run_collaborative_demo.py --demo
 
 ---
 
-## What Step 4 runs internally
+## Training Configuration — CARpsy-v2 (actual, Unsloth/Colab)
+
+CARpsy-v2 (the production model) was trained with **Unsloth on Google Colab (A100 GPU)** using `colab_finetune.ipynb`. These are the exact hyperparameters that produced the shipped model:
+
+| Parameter | Value |
+|-----------|-------|
+| Base model | `unsloth/Qwen3-0.6B` (loaded in 4-bit) |
+| Method | LoRA — supervised fine-tuning via TRL `SFTTrainer` |
+| Dataset | `canonical_dataset.jsonl` — **300 examples** (20 DTC codes × 15 questions), ChatML format |
+| Epochs | **100** |
+| Learning rate | **8e-5** |
+| LR scheduler | cosine, `warmup_steps=20` |
+| LoRA rank `r` | **16** |
+| LoRA alpha | **32** (alpha = 2×r) |
+| LoRA dropout | **0.05** |
+| Target modules | `q_proj, k_proj, v_proj, o_proj` |
+| Batch size | 4 × grad accum 4 = **16 effective** |
+| Weight decay | 1e-2 |
+| Optimizer | `adamw_8bit` |
+| Precision | bf16 (A100) / fp16 (T4) |
+| Max sequence length | 512 (`packing=True`) |
+| Seed | 42 |
+| Output | merged model exported to GGUF Q4_K_M → `CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf` |
+
+Each code has **one fixed canonical answer** in the BLUCKTEC format:
+`{CODE}: {SAE name}. Severity N/3 — {action}. Likely causes: ... {verdict}.`
+
+**Validation:** 8 BLUCKTEC test cases run after training; acceptance threshold is **≥6/8 correct** (response must contain the code, a `Severity` field, `Likely causes`, and a fault keyword). Inference uses `temperature=0.1`, `top_p=0.9`, with Qwen3 `<think>` blocks stripped.
+
+---
+
+## What Step 4 runs internally (local QVAC Fabric — alternative path)
+
+> This is the fully-local Path A (`scripts/04_run_finetune.py`), driven by `configs/training_config.yaml`. It was **not** used to produce CARpsy-v2 — see the table above for the actual training.
 
 ```bash
 llama-finetune-lora \
@@ -207,18 +256,18 @@ python scripts/04_run_finetune.py
 # output: output/adapter/carpsy-adapter.gguf  (delta only)
 ```
 
-### Path B — Unsloth on Google Colab (T4 GPU) ✅ Used
-Produces a **merged full model** (base + LoRA fused, ~1.1 GB Q4_K_M):
+### Path B — Unsloth on Google Colab (A100 GPU) ✅ Used
+Produces a **merged full model** (base + LoRA fused, Q4_K_M):
 ```
-Google Colab → colab_finetune.ipynb → Google Drive → output/adapter/qwen3-1.7b.Q4_K_M.gguf
+Google Colab → colab_finetune.ipynb → Google Drive → output/adapter/CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf
 ```
 
 | | QVAC Fabric | Unsloth/Colab |
 |--|-------------|---------------|
-| Output | small adapter (~MB) | merged model (~1.1 GB) |
-| Usage | `-m base.gguf --lora adapter.gguf` | `-m qwen3-1.7b.Q4_K_M.gguf` |
+| Output | small adapter (~MB) | merged model (Qwen3-0.6B Q4_K_M) |
+| Usage | `-m base.gguf --lora adapter.gguf` | `-m CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf` |
 | `adapterSrc` in SDK | `file://carpsy-adapter.gguf` | not needed |
-| `modelSrc` in SDK | predefined constant | `file://qwen3-1.7b.Q4_K_M.gguf` |
+| `modelSrc` in SDK | predefined constant | `file://CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf` |
 
 ## Integration with OBDient
 
@@ -226,7 +275,7 @@ Google Colab → colab_finetune.ipynb → Google Drive → output/adapter/qwen3-
 ```typescript
 // qvac-sdk.datasource.ts
 const modelId = await loadModel({
-  modelSrc: 'file://output/adapter/qwen3-1.7b.Q4_K_M.gguf',
+  modelSrc: 'file://output/adapter/CARpsy-v2-qwen3-0.6b.Q4_K_M.gguf',
 });
 ```
 
@@ -340,6 +389,17 @@ const modelId = await loadModel({
 | [Wal33D/dtc-database](https://github.com/Wal33D/dtc-database) | SQLite | ~28,000 codes, 33 manufacturers |
 | [peyo/dtc-and-vin-data](https://github.com/peyo/dtc-and-vin-data) | JSON | DTCs + VIN data |
 | [xinings/DTC-Database](https://github.com/xinings/DTC-Database) | JSON/XML | ~6,665 codes |
+
+---
+
+## Next Steps
+
+| Priority | Task |
+|----------|------|
+| 🔜 High | Train **CARpsy-v3** on Qwen3-1.7B Q4_K_M — same dataset and LoRA config, larger base for better reasoning |
+| 🔜 High | Expand dataset with parts pricing and repair procedures to strengthen CARpsy-Parts and CARpsy-Repair agents |
+| 🔵 Medium | Evaluate CARpsy-v3 vs CARpsy-v2 on the test split and publish comparison |
+| 🔵 Medium | Integrate CARpsy-v3 adapter into OBDient via QVAC Fabric LoRA path |
 
 ---
 
